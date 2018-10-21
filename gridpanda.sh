@@ -6,8 +6,7 @@ NEVENTS=$3
 CLUSTERID=$4
 PROCESSID=$5
 
-DESTINATION=gsiftp://t3serv010.mit.edu:2811/scratch/yiiyama/gridpanda
-source conf.txt
+source conf.sh
 
 for GRIDPACK in $GRIDPACKS
 do
@@ -70,7 +69,6 @@ hostname
 echo ""
 
 tar xzf certificates.tar.gz
-tar xzf letsencrypt_root.tar.gz # dumps root CA for LetsEncrypt into certificates
 
 export X509_CERT_DIR=$PWD/certificates
 export X509_USER_PROXY=$(ls x509up_u*)
@@ -158,6 +156,8 @@ else
     export LD_LIBRARY_PATH=$PWD/lcg-cp:$LD_LIBRARY_PATH
   fi
 fi
+
+# DESTINATION is set by condor via the "environment" classad
 
 if [ $TASKTYPE = "fullsimmini" ]
 then

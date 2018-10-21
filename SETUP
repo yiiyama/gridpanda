@@ -1,4 +1,5 @@
-TARBALL=$(basename $CMSSW_BASE).tar
+CWD=`pwd`
+TARBALL=panda_$(basename $CMSSW_BASE).tar
 cd $CMSSW_BASE
 tar chf $TARBALL biglib bin lib objs cfipython
 tar rf $TARBALL python
@@ -13,4 +14,5 @@ do
   done
 done
 gzip $TARBALL
-mv $TARBALL.gz ../
+mv $TARBALL.gz $CWD/
+cd $CWD
