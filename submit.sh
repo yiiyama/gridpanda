@@ -139,7 +139,7 @@ then
 
   echo "Job set up in $LOGDIR/$TASKNAME/test"
   echo "Execute:"
-  echo "  ./$EXECUTABLE $TASKTYPE $TASKNAME $NEVENTS 12345 0"
+  echo "  DESTINATION='$DESTINATION' ./$EXECUTABLE $TASKTYPE $TASKNAME $NEVENTS 12345 0"
   exit 0
 fi
 
