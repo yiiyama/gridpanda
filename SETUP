@@ -1,0 +1,16 @@
+TARBALL=$(basename $CMSSW_BASE).tar
+cd $CMSSW_BASE
+tar chf $TARBALL biglib bin lib objs cfipython
+tar rf $TARBALL python
+for PACKAGE in $(ls src)
+do
+  for SUBPACKAGE in $(ls src/$PACKAGE)
+  do
+    [ -d src/$PACKAGE/$SUBPACKAGE/python ] && tar rf $TARBALL src/$PACKAGE/$SUBPACKAGE/python
+    [ -d src/$PACKAGE/$SUBPACKAGE/data ] && tar rf $TARBALL src/$PACKAGE/$SUBPACKAGE/data
+    [ -d src/$PACKAGE/$SUBPACKAGE/interface ] && tar rf $TARBALL src/$PACKAGE/$SUBPACKAGE/interface
+    [ -d src/$PACKAGE/$SUBPACKAGE/dict ] && tar rf $TARBALL src/$PACKAGE/$SUBPACKAGE/dict
+  done
+done
+gzip $TARBALL
+mv $TARBALL.gz ../
