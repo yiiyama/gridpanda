@@ -96,9 +96,9 @@ then
   mkdir $LOGDIR/$TASKNAME/test
 fi
 
-tar czf $LOGDIR/certificates.tar.gz -C /etc/grid-security certificates
+tar czf $LOGDIR/$TASKNAME/certificates.tar.gz -C /etc/grid-security certificates
 
-INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/certificates.tar.gz,$TASKDIR/cmssw.sh,$TASKDIR/confs/$TASKNAME/,$TASKDIR/cmssw/panda_${PANDA_RELEASE}.tar.gz"
+INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$TASKDIR/cmssw.sh,$TASKDIR/confs/$TASKNAME/,$TASKDIR/cmssw/panda_${PANDA_RELEASE}.tar.gz"
 
 if [ "$GEN_CMSSW" ] && [ -e $TASKDIR/cmssw/${GEN_CMSSW}.tar.gz ]
 then
