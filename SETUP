@@ -2,6 +2,7 @@ CWD=`pwd`
 TARBALL=panda_$(basename $CMSSW_BASE).tar
 cd $CMSSW_BASE
 tar chf $TARBALL biglib bin lib objs cfipython
+[ -d myext ] && tar rf $TARBALL myext
 tar rf $TARBALL python
 for PACKAGE in $(ls src)
 do

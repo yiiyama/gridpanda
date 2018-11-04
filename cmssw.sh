@@ -15,6 +15,16 @@ then
   scram p -n ${TAG}_${RELEASE} CMSSW ${RELEASE}
   cd ${TAG}_${RELEASE}
   tar xzf ../${TAG}_${RELEASE}.tar.gz
+
+  if [ -d myext ]
+  then
+    # we have a custom external
+    for EXT in $(ls myext)
+    do
+      cp myext/$EXT/$EXT.xml config/toolbox/$SCRAM_ARCH/tools/selected
+      scram setup $EXT
+    done
+  fi
 else
   scram p CMSSW ${RELEASE}
   cd ${RELEASE}

@@ -159,42 +159,47 @@ process.generator = cms.EDFilter("Pythia8HadronizerFilter",
 
 process.externalLHEProducer = cms.EDProducer("ExternalLHEMixingProducer",
     inputs = cms.PSet(
-        lo1 = cms.PSet(
-            args = cms.vstring(os.getcwd() + '/Z_LO_Inclusive_1j_slc6_amd64_gcc481_CMSSW_7_1_30_tarball.tar.xz'),
-            nPartons = cms.uint32(1),
-            order = cms.string('LO'),
-            idprup = cms.uint32(3)
-        ),
-        lo2 = cms.PSet(
-            args = cms.vstring(os.getcwd() + '/Z_LO_Inclusive_2j_slc6_amd64_gcc481_CMSSW_7_1_30_tarball.tar.xz'),
-            nPartons = cms.uint32(2),
-            order = cms.string('LO'),
-            idprup = cms.uint32(4)
-        ),
-        lo3 = cms.PSet(
-            args = cms.vstring(os.getcwd() + '/Z_LO_Inclusive_3j_slc6_amd64_gcc481_CMSSW_7_1_30_tarball.tar.xz'),
-            nPartons = cms.uint32(3),
-            order = cms.string('LO'),
-            idprup = cms.uint32(5)
-        ),
-        nlo0 = cms.PSet(
-            args = cms.vstring(os.getcwd() + '/Z_NLO_Inclusive_0j_slc6_amd64_gcc481_CMSSW_7_1_30_tarball.tar.xz'),
-            isMain = cms.bool(True),
-            nPartons = cms.uint32(0),
-            order = cms.string('NLO'),
-            idprup = cms.uint32(0)
-        ),
-        nlo1 = cms.PSet(
-            args = cms.vstring(os.getcwd() + '/Z_NLO_Inclusive_1j_slc6_amd64_gcc481_CMSSW_7_1_30_tarball.tar.xz'),
-            nPartons = cms.uint32(1),
-            order = cms.string('NLO'),
-            idprup = cms.uint32(1)
-        ),
-        nlo2 = cms.PSet(
-            args = cms.vstring(os.getcwd() + '/Z_NLO_Inclusive_2j_slc6_amd64_gcc481_CMSSW_7_1_30_tarball.tar.xz'),
-            nPartons = cms.uint32(2),
-            order = cms.string('NLO'),
-            idprup = cms.uint32(2)
+        allproc = cms.PSet(
+            args = cms.vstring(os.getcwd() + '/Z_NLO_LO_Inclusive_slc6_amd64_gcc481_CMSSW_7_1_30_tarball.tar.xz'),
+            processMap = cms.VPSet(
+                cms.PSet(
+                    process = cms.uint32(0),
+                    order = cms.string('NLO'),
+                    nPartons = cms.uint32(0),
+                    idprup = cms.uint32(0)
+                ),
+                cms.PSet(
+                    process = cms.uint32(1),
+                    order = cms.string('NLO'),
+                    nPartons = cms.uint32(1),
+                    idprup = cms.uint32(1)
+                ),
+                cms.PSet(
+                    process = cms.uint32(2),
+                    order = cms.string('NLO'),
+                    nPartons = cms.uint32(2),
+                    idprup = cms.uint32(2)
+                ),
+                cms.PSet(
+                    process = cms.uint32(3),
+                    order = cms.string('LO'),
+                    nPartons = cms.uint32(1),
+                    idprup = cms.uint32(3)
+                ),
+                cms.PSet(
+                    process = cms.uint32(4),
+                    order = cms.string('LO'),
+                    nPartons = cms.uint32(2),
+                    idprup = cms.uint32(4)
+                ),
+                cms.PSet(
+                    process = cms.uint32(5),
+                    order = cms.string('LO'),
+                    nPartons = cms.uint32(3),
+                    idprup = cms.uint32(5)
+                )
+            ),
+            isMain = cms.bool(True)
         )
     ),
     nEvents = cms.untracked.uint32(int(options.maxEvents * 1.2)),
