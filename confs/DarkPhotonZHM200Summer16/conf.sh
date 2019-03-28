@@ -1,9 +1,4 @@
-GEN_ARCH=slc6_amd64_gcc481
-GEN_RELEASE=CMSSW_7_1_22
+PANDA_VERSION=005
+MINIAOD_CAMPAIGN=RunIISummer16MiniAODv2
 GRIDPACKS="gsiftp://eoscmsftp.cern.ch:2811//eos/cms/store/user/yiiyama/gridpacks/HZJ_slc6_amd64_gcc700_CMSSW_9_3_0_HZJ_HanythingJ_NNPDF30_13TeV_M200_Vleptonic_HZJ.tgz"
-
-PANDA_ARCH=slc6_amd64_gcc530
-PANDA_RELEASE=CMSSW_8_0_28
-RECO_ARCH=slc6_amd64_gcc530
-RECO_RELEASE=CMSSW_8_0_21
-MIXDATA=RunIISpring15PrePremix
+NCPU=1

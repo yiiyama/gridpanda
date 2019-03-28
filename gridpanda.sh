@@ -97,13 +97,13 @@ then
 
   echo ""
   echo "[GEN STEP]"
-  ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen -n $NCPU maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI $GRIDPACKS_ARG || exit $?
+  ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI $GRIDPACKS_ARG || exit $?
 
-  mv genpanda_${PANDA_VERSION}.py panda.py
+  mv genpanda_${PANDA_VERSION}.py panda_cfg.py
 
   echo ""
   echo "[PANDA STEP]"
-  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda -n $NCPU inputFiles=file:gen.root outputFile=panda.root || exit $?
+  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda ncpu=$NCPU inputFiles=file:gen.root outputFile=panda.root || exit $?
   [ $TASKTYPE = "gen" ] && rm gen.root
 
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
@@ -111,8 +111,7 @@ then
 
   echo ""
   echo "[GEN STEP]"
-  ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen -n $NCPU maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
-
+  ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
  
   [ "$RECO_CMSSW" ] && mv ${RAW_CMSSW}.tar.gz rawsim_${RECO_RELEASE}.tar.gz
 
@@ -126,7 +125,7 @@ then
   for att in $(seq 0 9)
   do
     # this step can fail due to pileup IO error
-    ./cmssw.sh $RECO_ARCH $RECO_RELEASE rawsim -n $NCPU inputFiles=file:gen.root outputFile=rawsim.root mixdata=$PWD/mixdata.list randomizeSeeds=True && break
+    ./cmssw.sh $RECO_ARCH $RECO_RELEASE rawsim ncpu=$NCPU inputFiles=file:gen.root outputFile=rawsim.root mixdata=$PWD/mixdata.list randomizeSeeds=True && break
   done
   RC=$?
   [ $RC -ne 0 ] && exit $RC
@@ -138,7 +137,7 @@ then
   
   echo ""
   echo "[RECO STEP]"
-  ./cmssw.sh $RECO_ARCH $RECO_RELEASE recosim -n $NCPU inputFiles=file:rawsim.root outputFile=recosim.root randomizeSeeds=True || exit $?
+  ./cmssw.sh $RECO_ARCH $RECO_RELEASE recosim ncpu=$NCPU inputFiles=file:rawsim.root outputFile=recosim.root randomizeSeeds=True || exit $?
   rm rawsim.root
 
   [ "$MINIAOD_CMSSW" ] && mv ${MINIAOD_CMSSW}.tar.gz miniaodsim_${MINIAOD_RELEASE}.tar.gz
@@ -147,14 +146,14 @@ then
   
   echo ""
   echo "[MINIAOD STEP]"
-  ./cmssw.sh $MINIAOD_ARCH $MINIAOD_RELEASE miniaodsim -n $NCPU inputFiles=file:recosim.root outputFile=miniaodsim.root randomizeSeeds=True || exit $?
+  ./cmssw.sh $MINIAOD_ARCH $MINIAOD_RELEASE miniaodsim ncpu=$NCPU inputFiles=file:recosim.root outputFile=miniaodsim.root randomizeSeeds=True || exit $?
   rm recosim.root
 
-  mv panda{_${PANDA_VERSION},cfg}.py
+  mv panda_{${PANDA_VERSION},cfg}.py
   
   echo ""
   echo "[PANDA STEP]"
-  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda -n $NCPU inputFiles=file:miniaodsim.root outputFile=panda.root || exit $?
+  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda inputFiles=file:miniaodsim.root outputFile=panda.root || exit $?
   [ $TASKTYPE = "fullsim" ] && rm miniaodsim.root
 
 fi

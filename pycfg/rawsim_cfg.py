@@ -4,6 +4,7 @@ from FWCore.ParameterSet.VarParsing import VarParsing
 options = VarParsing('analysis')
 options.register('mixdata', default = 'mixdata.list', mytype = VarParsing.varType.string)
 options.register('randomizeSeeds', default = False, mytype = VarParsing.varType.bool)
+options.register('ncpu', mytype = VarParsing.varType.int, default = 1)
 options._tags.pop('numEvent%d')
 options._tagOrder.remove('numEvent%d')
 options.parseArguments()
@@ -20,6 +21,8 @@ with open(options.mixdata) as src:
         mixFiles.append(line.strip())
 
 process.mixData.input.fileNames = mixFiles
+
+process.options.numberOfThreads=cms.untracked.uint32(options.ncpu)
 
 if options.randomizeSeeds:
     from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper

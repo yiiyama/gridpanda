@@ -85,8 +85,9 @@ fi
 [ $GEN_RELEASE ] || exitmsg "Unknown GEN_RELEASE for non-standard campaign" 1
 
 [ $PANDA_VERSION ] || exitmsg "Missing PANDA_VERSION" 1
+PANDA_ARCH=$($TASKDIR/read_confmap.py panda.${PANDA_VERSION}.arch)
+[ $PANDA_ARCH ] || exitmsg "Invalid PANDA_VERSION" 1
 PANDA_RELEASE=$($TASKDIR/read_confmap.py panda.${PANDA_VERSION}.release)
-[ $PANDA_RELEASE ] || exitmsg "Invalid PANDA_VERSION" 1
 
 if [ "$TEST" = true ] || [ "$TEST" = interactive ]
 then
@@ -159,6 +160,7 @@ echo "GEN_CAMPAIGN=$GEN_CAMPAIGN" >> $LOGDIR/$TASKNAME/conf.sh
 echo "GEN_ARCH=$GEN_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
 echo "GEN_RELEASE=$GEN_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
 echo "PANDA_VERSION=$PANDA_VERSION" >> $LOGDIR/$TASKNAME/conf.sh
+echo "PANDA_ARCH=$PANDA_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
 echo "PANDA_RELEASE=$PANDA_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
 echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
 
@@ -185,13 +187,19 @@ then
   INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz
 fi
 
+INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/gen_cfg.py
+
 if [ $TASKTYPE = "gen" ]
 then
   INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/genpanda_${PANDA_VERSION}.py
   [ "$MAXWALLTIME" ] || MAXWALLTIME=180
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
 then
-  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/{gen,rawsim,recosim,miniaodsim}_cfg.py,$TASKDIR/pycfg/rawsim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/recosim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/miniaodsim_${MINIAOD_CAMPAIGN}.py,$TASKDIR/pycfg/panda_${PANDA_VERSION}.py,$TASKDIR/mixdata/mixdata_${MIXDATA}.list.gz
+  for STEP in rawsim recosim miniaodsim
+  do
+    INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/${STEP}_cfg.py
+  done
+  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/rawsim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/recosim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/miniaodsim_${MINIAOD_CAMPAIGN}.py,$TASKDIR/pycfg/panda_${PANDA_VERSION}.py,$TASKDIR/mixdata/mixdata_${MIXDATA}.list.gz
   [ "$MAXWALLTIME" ] || MAXWALLTIME=480
 fi
 

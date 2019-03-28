@@ -1,13 +1,3 @@
-from FWCore.ParameterSet.VarParsing import VarParsing
-
-options = VarParsing('analysis')
-options.register('firstLumi', default = 1, mytype = VarParsing.varType.int)
-options.register('randomizeSeeds', default = False, mytype = VarParsing.varType.bool)
-options.register('simStep', mytype = VarParsing.varType.bool, default = False)
-options._tags.pop('numEvent%d')
-options._tagOrder.remove('numEvent%d')
-options.parseArguments()
-
 # Auto generated configuration file
 # using: 
 # Revision: 1.19 
@@ -34,13 +24,11 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(options.maxEvents)
+    input = cms.untracked.int32(26)
 )
 
 # Input source
-process.source = cms.Source("EmptySource",
-    firstLuminosityBlock = cms.untracked.uint32(options.firstLumi)
-)
+process.source = cms.Source("EmptySource")
 
 process.options = cms.untracked.PSet(
 
@@ -59,7 +47,7 @@ process.RAWSIMoutput = cms.OutputModule("PoolOutputModule",
     splitLevel = cms.untracked.int32(0),
     eventAutoFlushCompressedSize = cms.untracked.int32(5242880),
     outputCommands = process.RAWSIMEventContent.outputCommands,
-    fileName = cms.untracked.string(options.outputFile),
+    fileName = cms.untracked.string(''),
     dataset = cms.untracked.PSet(
         filterName = cms.untracked.string(''),
         dataTier = cms.untracked.string('GEN-SIM')
@@ -132,7 +120,7 @@ process.generator = cms.EDFilter("Pythia8HadronizerFilter",
 
 
 process.externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
-    nEvents = cms.untracked.uint32(options.maxEvents),
+    nEvents = cms.untracked.uint32(26),
     outputFile = cms.string('cmsgrid_final.lhe'),
     scriptName = cms.FileInPath('GeneratorInterface/LHEInterface/data/run_generic_tarball_cvmfs.sh'),
     numberOfParameters = cms.uint32(1),
@@ -152,10 +140,7 @@ process.RAWSIMoutput_step = cms.EndPath(process.RAWSIMoutput)
 process.LHEoutput_step = cms.EndPath(process.LHEoutput)
 
 # Schedule definition
-if options.simStep:
-    process.schedule = cms.Schedule(process.lhe_step,process.generation_step,process.genfiltersummary_step,process.simulation_step,process.endjob_step,process.RAWSIMoutput_step)
-else:
-    process.schedule = cms.Schedule(process.lhe_step,process.generation_step,process.genfiltersummary_step,process.endjob_step,process.RAWSIMoutput_step)
+process.schedule = cms.Schedule(process.lhe_step,process.generation_step,process.genfiltersummary_step,process.simulation_step,process.endjob_step,process.RAWSIMoutput_step)
 
 # filter all path with the production filter sequence
 for path in process.paths:
@@ -180,8 +165,3 @@ process = customisePostLS1(process)
 
 # Customisation from command line
 process.RandomNumberGeneratorService.externalLHEProducer.initialSeed=int(1553615798%100)
-
-if options.randomizeSeeds:
-    from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
-    randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
-    randSvc.populate()

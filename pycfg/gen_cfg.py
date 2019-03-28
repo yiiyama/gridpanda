@@ -6,6 +6,7 @@ options.register('firstLumi', default = 1, mytype = VarParsing.varType.int)
 options.register('randomizeSeeds', default = False, mytype = VarParsing.varType.bool)
 options.register('simStep', mytype = VarParsing.varType.bool, default = False)
 options.register('gridpacks', mytype = VarParsing.varType.string, mult = VarParsing.multiplicity.list)
+options.register('ncpu', mytype = VarParsing.varType.int, default = 1)
 options._tags.pop('numEvent%d')
 options._tagOrder.remove('numEvent%d')
 options.parseArguments()
@@ -17,8 +18,9 @@ process.source.firstLuminosityBlock = cms.untracked.uint32(options.firstLumi)
 process.RAWSIMoutput.fileName = cms.untracked.string(options.outputFile)
 process.externalLHEProducer.nEvents = cms.untracked.uint32(options.maxEvents)
 if len(options.gridpacks):
-    for gp in options.gridpacks:
-        process.externalLHEProducer.args.append(gp)
+    process.externalLHEProducer.args = cms.vstring(options.gridpacks)
+
+process.options.numberOfThreads=cms.untracked.uint32(options.ncpu)
 
 if not options.simStep:
     process.schedule.remove(process.simulation_step)
