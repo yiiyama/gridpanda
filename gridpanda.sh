@@ -57,7 +57,7 @@ else
   JOBID=test
 fi
 
-if [ $(readlink /cvmfs/cms.cern.ch/SITECONF/local) = "T3_US_OSG" ]
+if [ "$(readlink /cvmfs/cms.cern.ch/SITECONF/local)" = "T3_US_OSG" ]
 then
   mkdir SITECONF
   ln -s /cvmfs/cms.cern.ch/SITECONF/T2_US_MIT SITECONF/local
@@ -86,6 +86,7 @@ ls -l
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 
 mv gen{,_${GEN_RELEASE}}.py
+
 if [ "$GEN_CMSSW" ]
 then
   mv ${GEN_CMSSW}.tar.gz gen_${GEN_RELEASE}.tar.gz
@@ -103,7 +104,7 @@ then
   echo ""
   echo "[PANDA STEP]"
   ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda inputFiles=file:gen.root outputFile=panda.root || exit $?
-  rm gen.root
+  [ $TASKTYPE = "gen" ] && rm gen.root
 
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
 then
@@ -114,6 +115,13 @@ then
   echo "[GEN STEP]"
   ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True || exit $?
 
+  [ -e rawsim.py ] && mv rawsim{,_${RECO_RELEASE}}.py
+  
+  if [ "$RAW_CMSSW" ]
+  then
+    mv ${RAW_CMSSW}.tar.gz rawsim_${RECO_RELEASE}.tar.gz
+  fi
+
   echo ""
   echo "[RAW STEP]"
   for att in $(seq 0 9)
@@ -121,13 +129,28 @@ then
     # this step can fail due to pileup IO error
     ./cmssw.sh $RECO_ARCH $RECO_RELEASE rawsim inputFiles=file:gen.root outputFile=rawsim.root randomizeSeeds=True && break
   done
-  [ $? -ne 0 ] && exit $?
+  RC=$?
+  [ $RC -ne 0 ] && exit $RC
   rm gen.root
+
+  [ -e recosim.py ] && mv recosim{,_${RECO_RELEASE}}.py
+
+  if [ "$RECO_CMSSW" ]
+  then
+    mv ${RECO_CMSSW}.tar.gz recosim_${RECO_RELEASE}.tar.gz
+  fi
   
   echo ""
   echo "[RECO STEP]"
   ./cmssw.sh $RECO_ARCH $RECO_RELEASE recosim inputFiles=file:rawsim.root outputFile=recosim.root randomizeSeeds=True || exit $?
   rm rawsim.root
+
+  [ -e miniaodsim.py ] && mv miniaodsim{,_${RECO_RELEASE}}.py
+
+  if [ "$MINIAOD_CMSSW" ]
+  then
+    mv ${MINIAOD_CMSSW}.tar.gz miniaodsim_${RECO_RELEASE}.tar.gz
+  fi
   
   echo ""
   echo "[MINIAOD STEP]"

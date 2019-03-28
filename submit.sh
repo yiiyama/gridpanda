@@ -2,6 +2,7 @@
 
 ## EDIT BELOW
 DESTINATION=gsiftp://t3serv010.mit.edu:2811/scratch/yiiyama/gridpanda
+#DESTINATION=gsiftp://se01.cmsaf.mit.edu:2811/cms/store/user/yiiyama/gridpanda
 LOGDIR=/work/yiiyama/cms/logs/gridpanda
 ## EDIT ABOVE
 
@@ -27,6 +28,12 @@ TASKTYPE=$1 # gen, fullsim, fullsimmini
 TASKNAME=$2 # confs subdirectory
 NEVENTS=$3
 NJOBS=$4
+
+if ! [ $TASKTYPE ]
+then
+  echo "Usage: submit.sh (gen|fullsim|fullsimmini) TASKNAME NEVENTS NJOBS"
+  exit 0
+fi
 
 TASKDIR=$(cd $(dirname $(readlink -f $0)); pwd)
 EXECUTABLE=gridpanda.sh
@@ -64,7 +71,7 @@ else
                    ( HAS_SINGULARITY == true || GLIDEIN_REQUIRED_OS == "rhel6" ) || \
                    ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms" || BOSCOGroup == "paus") ) \
                  ) && \
-                 '$(./exclusions.py)
+                 '$($TASKDIR/exclusions.py)
   REQUEST_CPUS=8
 fi
 
@@ -104,6 +111,18 @@ if [ "$GEN_CMSSW" ] && [ -e $TASKDIR/cmssw/${GEN_CMSSW}.tar.gz ]
 then
   INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${GEN_CMSSW}.tar.gz
 fi
+if [ "$RAW_CMSSW" ] && [ -e $TASKDIR/cmssw/${RAW_CMSSW}.tar.gz ]
+then
+  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${RAW_CMSSW}.tar.gz
+fi
+if [ "$RECO_CMSSW" ] && [ -e $TASKDIR/cmssw/${RECO_CMSSW}.tar.gz ]
+then
+  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${RECO_CMSSW}.tar.gz
+fi
+if [ "$MINIAOD_CMSSW" ] && [ -e $TASKDIR/cmssw/${MINIAOD_CMSSW}.tar.gz ]
+then
+  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${MINIAOD_CMSSW}.tar.gz
+fi
 
 if [ $TASKTYPE = "gen" ]
 then
@@ -139,7 +158,7 @@ then
 
   echo "Job set up in $LOGDIR/$TASKNAME/test"
   echo "Execute:"
-  echo "  DESTINATION='$DESTINATION' ./$EXECUTABLE $TASKTYPE $TASKNAME $NEVENTS 12345 0"
+  echo "  DESTINATION='$DESTINATION' time ./$EXECUTABLE $TASKTYPE $TASKNAME $NEVENTS 12345 0"
   exit 0
 fi
 
