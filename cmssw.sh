@@ -34,7 +34,7 @@ eval `scram runtime -sh`
 
 cd -
 
-CFG=${TAG}_${RELEASE}.py
+CFG=${TAG}_cfg.py
 
 echo cmsRun $CFG $ARGS
 cmsRun $CFG $ARGS

@@ -1,21 +1,13 @@
-from FWCore.ParameterSet.VarParsing import VarParsing
-
-options = VarParsing('analysis')
-options.register('randomizeSeeds', default = False, mytype = VarParsing.varType.bool)
-options._tags.pop('numEvent%d')
-options._tagOrder.remove('numEvent%d')
-options.parseArguments()
-
 # Auto generated configuration file
 # using: 
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: step1 --fileout file:HIG-RunIIFall17DRPremix-00466_step1.root --pileup_input file:pu.root --mc --eventcontent PREMIXRAW --datatier GEN-SIM-RAW --conditions 94X_mc2017_realistic_v10 --step DIGIPREMIX_S2,DATAMIX,L1,DIGI2RAW,HLT:2e34v40 --nThreads 8 --datamix PreMix --era Run2_2017 --python_filename HIG-RunIIFall17DRPremix-00466_1_cfg.py --no_exec --customise Configuration/DataProcessing/Utils.addMonitoring -n 1751
+# with command line options: step1 --fileout out.root --pileup_input pileup.root --mc --eventcontent PREMIXRAW --datatier GEN-SIM-RAW --conditions 80X_mcRun2_asymptotic_2016_TrancheIV_v6 --step DIGIPREMIX_S2,DATAMIX,L1,DIGI2RAW,HLT:@frozen2016 --datamix PreMix --era Run2_2016 --python_filename raw.py --no_exec --customise Configuration/DataProcessing/Utils.addMonitoring -n 360
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
 
-process = cms.Process('HLT',eras.Run2_2017)
+process = cms.Process('HLT',eras.Run2_2016)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -30,17 +22,17 @@ process.load('SimGeneral.MixingModule.digi_MixPreMix_cfi')
 process.load('Configuration.StandardSequences.DataMixerPreMix_cff')
 process.load('Configuration.StandardSequences.SimL1EmulatorDM_cff')
 process.load('Configuration.StandardSequences.DigiToRawDM_cff')
-process.load('HLTrigger.Configuration.HLT_2e34v40_cff')
+process.load('HLTrigger.Configuration.HLT_25ns15e33_v4_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(options.maxEvents)
+    input = cms.untracked.int32(-1)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring(options.inputFiles),
+    fileNames = cms.untracked.vstring(''),
     secondaryFileNames = cms.untracked.vstring()
 )
 
@@ -50,7 +42,7 @@ process.options = cms.untracked.PSet(
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
-    annotation = cms.untracked.string('step1 nevts:1751'),
+    annotation = cms.untracked.string('step1 nevts:360'),
     name = cms.untracked.string('Applications'),
     version = cms.untracked.string('$Revision: 1.19 $')
 )
@@ -62,7 +54,8 @@ process.PREMIXRAWoutput = cms.OutputModule("PoolOutputModule",
         dataTier = cms.untracked.string('GEN-SIM-RAW'),
         filterName = cms.untracked.string('')
     ),
-    fileName = cms.untracked.string(options.outputFile),
+    eventAutoFlushCompressedSize = cms.untracked.int32(5242880),
+    fileName = cms.untracked.string(''),
     outputCommands = process.PREMIXRAWEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0)
 )
@@ -73,7 +66,7 @@ process.PREMIXRAWoutput = cms.OutputModule("PoolOutputModule",
 process.mix.digitizers = cms.PSet(process.theDigitizersMixPreMix)
 process.mixData.input.fileNames = cms.untracked.vstring(['placeholder'])
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '94X_mc2017_realistic_v10', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '80X_mcRun2_asymptotic_2016_TrancheIV_v6', '')
 
 # Path and EndPath definitions
 process.digitisation_step = cms.Path(process.pdigi)
@@ -87,12 +80,6 @@ process.PREMIXRAWoutput_step = cms.EndPath(process.PREMIXRAWoutput)
 process.schedule = cms.Schedule(process.digitisation_step,process.datamixing_step,process.L1simulation_step,process.digi2raw_step)
 process.schedule.extend(process.HLTSchedule)
 process.schedule.extend([process.endjob_step,process.PREMIXRAWoutput_step])
-from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
-associatePatAlgosToolsTask(process)
-
-#Setup FWK for multithreaded
-process.options.numberOfThreads=cms.untracked.uint32(8)
-process.options.numberOfStreams=cms.untracked.uint32(0)
 
 # customisation of the process.
 
@@ -103,28 +90,9 @@ from Configuration.DataProcessing.Utils import addMonitoring
 process = addMonitoring(process)
 
 # Automatic addition of the customisation function from HLTrigger.Configuration.customizeHLTforMC
-from HLTrigger.Configuration.customizeHLTforMC import customizeHLTforMC 
+from HLTrigger.Configuration.customizeHLTforMC import customizeHLTforFullSim 
 
-#call to customisation function customizeHLTforMC imported from HLTrigger.Configuration.customizeHLTforMC
-process = customizeHLTforMC(process)
+#call to customisation function customizeHLTforFullSim imported from HLTrigger.Configuration.customizeHLTforMC
+process = customizeHLTforFullSim(process)
 
 # End of customisation functions
-
-# Customisation from command line
-
-# Add early deletion of temporary data products to reduce peak memory need
-from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
-process = customiseEarlyDelete(process)
-# End adding early deletion
-
-mixFiles = []
-with open('mixdata_RunIISummer17PrePremix.list') as src:
-    for line in src:
-        mixFiles.append(line.strip())
-
-process.mixData.input.fileNames = mixFiles
-
-if options.randomizeSeeds:
-    from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
-    randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
-    randSvc.populate()

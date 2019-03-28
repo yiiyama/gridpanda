@@ -1,22 +1,13 @@
-from FWCore.ParameterSet.VarParsing import VarParsing
-
-options = VarParsing('analysis')
-options.register('randomizeSeeds', default = False, mytype = VarParsing.varType.bool)
-options._tags.pop('numEvent%d')
-options._tagOrder.remove('numEvent%d')
-options.parseArguments()
-
 # Auto generated configuration file
 # using: 
 # Revision: 1.19 
 # Source: /local/reps/CMSSW/CMSSW/Configuration/Applications/python/ConfigBuilder.py,v 
-# with command line options: step1 --filein file:gensim.root --fileout file:HIG-RunIIAutumn18DRPremix-00838_step1.root --pileup_input file:pu.root --mc --eventcontent PREMIXRAW --datatier GEN-SIM-RAW --conditions 102X_upgrade2018_realistic_v15 --step DIGI,DATAMIX,L1,DIGI2RAW,HLT:@relval2018 --procModifiers premix_stage2 --nThreads 8 --geometry DB:Extended --datamix PreMix --era Run2_2018 --python_filename HIG-RunIIAutumn18DRPremix-00838_1_cfg.py --no_exec --customise Configuration/DataProcessing/Utils.addMonitoring -n 2626
+# with command line options: step1 --fileout file:HIG-RunIIFall17DRPremix-00466_step1.root --pileup_input file:pu.root --mc --eventcontent PREMIXRAW --datatier GEN-SIM-RAW --conditions 94X_mc2017_realistic_v10 --step DIGIPREMIX_S2,DATAMIX,L1,DIGI2RAW,HLT:2e34v40 --nThreads 8 --datamix PreMix --era Run2_2017 --python_filename HIG-RunIIFall17DRPremix-00466_1_cfg.py --no_exec --customise Configuration/DataProcessing/Utils.addMonitoring -n 1751
 import FWCore.ParameterSet.Config as cms
 
 from Configuration.StandardSequences.Eras import eras
-from Configuration.ProcessModifiers.premix_stage2_cff import premix_stage2
 
-process = cms.Process('HLT',eras.Run2_2018,premix_stage2)
+process = cms.Process('HLT',eras.Run2_2017)
 
 # import of standard configurations
 process.load('Configuration.StandardSequences.Services_cff')
@@ -26,41 +17,22 @@ process.load('Configuration.EventContent.EventContent_cff')
 process.load('SimGeneral.MixingModule.mixNoPU_cfi')
 process.load('Configuration.StandardSequences.GeometryRecoDB_cff')
 process.load('Configuration.StandardSequences.MagneticField_cff')
-process.load('Configuration.StandardSequences.DigiDM_cff')
+process.load('Configuration.StandardSequences.DigiDMPreMix_cff')
+process.load('SimGeneral.MixingModule.digi_MixPreMix_cfi')
 process.load('Configuration.StandardSequences.DataMixerPreMix_cff')
 process.load('Configuration.StandardSequences.SimL1EmulatorDM_cff')
 process.load('Configuration.StandardSequences.DigiToRawDM_cff')
-process.load('HLTrigger.Configuration.HLT_2018v32_cff')
+process.load('HLTrigger.Configuration.HLT_2e34v40_cff')
 process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(options.maxEvents)
+    input = cms.untracked.int32(-1)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring(options.inputFiles),
-    dropDescendantsOfDroppedBranches = cms.untracked.bool(False),
-    inputCommands = cms.untracked.vstring(
-        'keep *', 
-        'drop *_genParticles_*_*', 
-        'drop *_genParticlesForJets_*_*', 
-        'drop *_kt4GenJets_*_*', 
-        'drop *_kt6GenJets_*_*', 
-        'drop *_iterativeCone5GenJets_*_*', 
-        'drop *_ak4GenJets_*_*', 
-        'drop *_ak7GenJets_*_*', 
-        'drop *_ak8GenJets_*_*', 
-        'drop *_ak4GenJetsNoNu_*_*', 
-        'drop *_ak8GenJetsNoNu_*_*', 
-        'drop *_genCandidatesForMET_*_*', 
-        'drop *_genParticlesForMETAllVisible_*_*', 
-        'drop *_genMetCalo_*_*', 
-        'drop *_genMetCaloAndNonPrompt_*_*', 
-        'drop *_genMetTrue_*_*', 
-        'drop *_genMetIC5GenJs_*_*'
-    ),
+    fileNames = cms.untracked.vstring(''),
     secondaryFileNames = cms.untracked.vstring()
 )
 
@@ -70,7 +42,7 @@ process.options = cms.untracked.PSet(
 
 # Production Info
 process.configurationMetadata = cms.untracked.PSet(
-    annotation = cms.untracked.string('step1 nevts:2626'),
+    annotation = cms.untracked.string('step1 nevts:1751'),
     name = cms.untracked.string('Applications'),
     version = cms.untracked.string('$Revision: 1.19 $')
 )
@@ -82,7 +54,7 @@ process.PREMIXRAWoutput = cms.OutputModule("PoolOutputModule",
         dataTier = cms.untracked.string('GEN-SIM-RAW'),
         filterName = cms.untracked.string('')
     ),
-    fileName = cms.untracked.string(options.outputFile),
+    fileName = cms.untracked.string(''),
     outputCommands = process.PREMIXRAWEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0)
 )
@@ -90,9 +62,10 @@ process.PREMIXRAWoutput = cms.OutputModule("PoolOutputModule",
 # Additional output definition
 
 # Other statements
+process.mix.digitizers = cms.PSet(process.theDigitizersMixPreMix)
 process.mixData.input.fileNames = cms.untracked.vstring(['placeholder'])
 from Configuration.AlCa.GlobalTag import GlobalTag
-process.GlobalTag = GlobalTag(process.GlobalTag, '102X_upgrade2018_realistic_v15', '')
+process.GlobalTag = GlobalTag(process.GlobalTag, '94X_mc2017_realistic_v10', '')
 
 # Path and EndPath definitions
 process.digitisation_step = cms.Path(process.pdigi)
@@ -135,15 +108,3 @@ process = customizeHLTforMC(process)
 from Configuration.StandardSequences.earlyDeleteSettings_cff import customiseEarlyDelete
 process = customiseEarlyDelete(process)
 # End adding early deletion
-
-mixFiles = []
-with open('mixdata_RunIISummer17PrePremix-PUAutumn18.list') as src:
-    for line in src:
-        mixFiles.append(line.strip())
-
-process.mixData.input.fileNames = mixFiles
-
-if options.randomizeSeeds:
-    from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
-    randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
-    randSvc.populate()

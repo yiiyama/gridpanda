@@ -8,6 +8,7 @@ PROCESSID=$5
 
 source conf.sh
 
+GRIDPACKS_ARG=
 for GRIDPACK in $GRIDPACKS
 do
   if [[ $GRIDPACK =~ http:// ]]
@@ -45,6 +46,8 @@ do
       $COPYCMD "$URL" $GRIDPACK && break
       sleep 60
     done
+
+    GRIDPACKS_ARG="$GRIDPACKS_ARG gridpacks=$PWD/$GRIDPACK"
   fi
 done
 
@@ -85,81 +88,73 @@ ls -l
 
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 
-mv gen{,_${GEN_RELEASE}}.py
+[ $GEN_CMSSW ] && mv ${GEN_CMSSW}.tar.gz gen_${GEN_RELEASE}.tar.gz
 
-if [ "$GEN_CMSSW" ]
-then
-  mv ${GEN_CMSSW}.tar.gz gen_${GEN_RELEASE}.tar.gz
-fi
+mv gen.py _gen.py
 
 if [ $TASKTYPE = "gen" ]
 then
 
-  mv {gen,}panda_${PANDA_RELEASE}.py
-
   echo ""
   echo "[GEN STEP]"
-  ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI || exit $?
+  ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen -n $NCPU maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI $GRIDPACKS_ARG || exit $?
+
+  mv genpanda_${PANDA_VERSION}.py panda.py
 
   echo ""
   echo "[PANDA STEP]"
-  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda inputFiles=file:gen.root outputFile=panda.root || exit $?
+  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda -n $NCPU inputFiles=file:gen.root outputFile=panda.root || exit $?
   [ $TASKTYPE = "gen" ] && rm gen.root
 
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
 then
 
-  gunzip mixdata_${MIXDATA}.list.gz
-
   echo ""
   echo "[GEN STEP]"
-  ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True || exit $?
+  ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen -n $NCPU maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
 
-  [ -e rawsim.py ] && mv rawsim{,_${RECO_RELEASE}}.py
-  
-  if [ "$RAW_CMSSW" ]
-  then
-    mv ${RAW_CMSSW}.tar.gz rawsim_${RECO_RELEASE}.tar.gz
-  fi
+ 
+  [ "$RECO_CMSSW" ] && mv ${RAW_CMSSW}.tar.gz rawsim_${RECO_RELEASE}.tar.gz
+
+  mv rawsim_${RECO_CAMPAIGN}.py _rawsim.py
+
+  gunzip mixdata_${MIXDATA}.list.gz
+  mv mixdata{_${MIXDATA},}.list
 
   echo ""
   echo "[RAW STEP]"
   for att in $(seq 0 9)
   do
     # this step can fail due to pileup IO error
-    ./cmssw.sh $RECO_ARCH $RECO_RELEASE rawsim inputFiles=file:gen.root outputFile=rawsim.root randomizeSeeds=True && break
+    ./cmssw.sh $RECO_ARCH $RECO_RELEASE rawsim -n $NCPU inputFiles=file:gen.root outputFile=rawsim.root mixdata=$PWD/mixdata.list randomizeSeeds=True && break
   done
   RC=$?
   [ $RC -ne 0 ] && exit $RC
   rm gen.root
 
-  [ -e recosim.py ] && mv recosim{,_${RECO_RELEASE}}.py
+  [ "$RECO_CMSSW" ] && mv ${RECO_CMSSW}.tar.gz recosim_${RECO_RELEASE}.tar.gz
 
-  if [ "$RECO_CMSSW" ]
-  then
-    mv ${RECO_CMSSW}.tar.gz recosim_${RECO_RELEASE}.tar.gz
-  fi
+  mv recosim_${RECO_CAMPAIGN}.py _recosim.py
   
   echo ""
   echo "[RECO STEP]"
-  ./cmssw.sh $RECO_ARCH $RECO_RELEASE recosim inputFiles=file:rawsim.root outputFile=recosim.root randomizeSeeds=True || exit $?
+  ./cmssw.sh $RECO_ARCH $RECO_RELEASE recosim -n $NCPU inputFiles=file:rawsim.root outputFile=recosim.root randomizeSeeds=True || exit $?
   rm rawsim.root
 
-  [ -e miniaodsim.py ] && mv miniaodsim{,_${RECO_RELEASE}}.py
+  [ "$MINIAOD_CMSSW" ] && mv ${MINIAOD_CMSSW}.tar.gz miniaodsim_${MINIAOD_RELEASE}.tar.gz
 
-  if [ "$MINIAOD_CMSSW" ]
-  then
-    mv ${MINIAOD_CMSSW}.tar.gz miniaodsim_${RECO_RELEASE}.tar.gz
-  fi
+  mv miniaodsim_${MINIAOD_CAMPAIGN}.py _miniaodsim.py
   
   echo ""
   echo "[MINIAOD STEP]"
-  ./cmssw.sh $RECO_ARCH $RECO_RELEASE miniaodsim inputFiles=file:recosim.root outputFile=miniaodsim.root randomizeSeeds=True || exit $?
+  ./cmssw.sh $MINIAOD_ARCH $MINIAOD_RELEASE miniaodsim -n $NCPU inputFiles=file:recosim.root outputFile=miniaodsim.root randomizeSeeds=True || exit $?
   rm recosim.root
+
+  mv panda{_${PANDA_VERSION},cfg}.py
   
   echo ""
   echo "[PANDA STEP]"
-  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda inputFiles=file:miniaodsim.root outputFile=panda.root || exit $?
+  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda -n $NCPU inputFiles=file:miniaodsim.root outputFile=panda.root || exit $?
   [ $TASKTYPE = "fullsim" ] && rm miniaodsim.root
 
 fi

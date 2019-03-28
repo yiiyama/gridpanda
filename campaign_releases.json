@@ -1,0 +1,22 @@
+{
+  "panda": {
+    "005": {"arch": "slc6_amd64_gcc530", "release": "CMSSW_8_0_28"},
+    "012": {"arch": "slc6_amd64_gcc630", "release": "CMSSW_10_1_4"},
+    "013": {"arch": "slc6_amd64_gcc700", "release": "CMSSW_10_2_5_patch1"}
+  },
+  "miniaod": {
+    "RunIISummer16MiniAODv2": {"arch": "slc6_amd64_gcc530", "release": "CMSSW_8_0_21", "parent": "RunIISummer16DR80Premix"},
+    "RunIIFall17MiniAOD": {"arch": "slc6_amd64_gcc630", "release": "CMSSW_9_4_0_patch1", "parent": "RunIIFall17DRPremix"},
+    "RunIIAutumn18MiniAOD": {"arch": "slc6_amd64_gcc700", "release": "CMSSW_10_2_5", "parent": "RunIIAutumn18DRPremix"}
+  },
+  "digireco": {
+    "RunIISummer16DR80Premix": {"arch": "slc6_amd64_gcc530", "release": "CMSSW_8_0_21", "mix": "RunIISpring15PrePremix", "parent": "RunIISummer15wmLHEGS"},
+    "RunIIFall17DRPremix": {"arch": "slc6_amd64_gcc630", "release": "CMSSW_9_4_0_patch1", "mix": "RunIISummer17PrePremix", "parent": "RunIIFall17wmLHEGS"},
+    "RunIIAutumn18DRPremix": {"arch": "slc6_amd64_gcc700", "release": "CMSSW_10_2_5", "mix": "RunIISummer17PrePremix-PUAutumn18", "parent": "RunIIFall18wmLHEGS"}
+  },
+  "gen": {
+    "RunIISummer15wmLHEGS": {"arch": "slc6_amd64_gcc481", "release": "CMSSW_7_1_25_patch3"},
+    "RunIIFall17wmLHEGS": {"arch": "slc6_amd64_gcc630", "release": "CMSSW_9_3_9_patch1"},
+    "RunIIFall18wmLHEGS": {"arch": "slc6_amd64_gcc700", "release": "CMSSW_10_2_6"}
+  }
+}

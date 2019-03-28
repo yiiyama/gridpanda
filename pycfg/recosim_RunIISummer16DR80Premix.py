@@ -1,11 +1,3 @@
-from FWCore.ParameterSet.VarParsing import VarParsing
-
-options = VarParsing('analysis')
-options.register('randomizeSeeds', default = False, mytype = VarParsing.varType.bool)
-options._tags.pop('numEvent%d')
-options._tagOrder.remove('numEvent%d')
-options.parseArguments()
-
 # Auto generated configuration file
 # using: 
 # Revision: 1.19 
@@ -32,12 +24,12 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(options.maxEvents)
+    input = cms.untracked.int32(-1)
 )
 
 # Input source
 process.source = cms.Source("PoolSource",
-    fileNames = cms.untracked.vstring(options.inputFiles),
+    fileNames = cms.untracked.vstring(''),
     secondaryFileNames = cms.untracked.vstring()
 )
 
@@ -62,7 +54,7 @@ process.AODSIMoutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(15728640),
-    fileName = cms.untracked.string(options.outputFile),
+    fileName = cms.untracked.string(''),
     outputCommands = process.AODSIMEventContent.outputCommands
 )
 
@@ -96,8 +88,3 @@ from FWCore.ParameterSet.Utilities import convertToUnscheduled
 process=convertToUnscheduled(process)
 from FWCore.ParameterSet.Utilities import cleanUnscheduled
 process=cleanUnscheduled(process)
-
-if options.randomizeSeeds:
-    from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
-    randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
-    randSvc.populate()

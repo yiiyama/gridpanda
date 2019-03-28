@@ -29,33 +29,70 @@ TASKNAME=$2 # confs subdirectory
 NEVENTS=$3
 NJOBS=$4
 
-if ! [ $TASKTYPE ]
-then
-  echo "Usage: submit.sh (gen|fullsim|fullsimmini) TASKNAME NEVENTS NJOBS"
-  exit 0
-fi
+function exitmsg() {
+  echo $1
+  exit $2
+}
+
+[ $TASKTYPE ] || exitmsg "Usage: submit.sh (gen|fullsim|fullsimmini) TASKNAME NEVENTS NJOBS" 0
 
 TASKDIR=$(cd $(dirname $(readlink -f $0)); pwd)
 EXECUTABLE=gridpanda.sh
 
 source $TASKDIR/confs/$TASKNAME/conf.sh || exit 1
 # conf.sh can set the following parameters (*=required for all confs, -=required if TASKTYPE is fullsim or fullsimmini, .=depends on the conf, o=optional):
-#  * GEN_ARCH: scram arch for the gen step
-#  * GEN_RELEASE: CMSSW release (full name) for the gen step
-#  - RECO_ARCH: scram arch for the rawsim, recosim, and miniaodsim steps
-#  - RECO_RELEASE: CMSSW release (full name) for the rawsim, recosim, and miniaodsim steps
-#  * PANDA_ARCH: scram arch for the panda step
-#  * PANDA_RELEASE: CMSSW release (full name) for the panda step
-#  - MIXDATA: Name of the mixdata list file (minus .list.gz) when 
-#  . GEN_CMSSW: CMSSW tarball name (minus .tar.gz) for the gen step, tarball found in the cmssw/ directory
+#  o GEN_ARCH: SCRAM arch for the gensim step
+#  . GEN_CAMPAIGN: Production campaign for the gensim step. Required if TASKTYPE is gen
+#  . GEN_RELEASE: CMSSW release (full name) for the gensim step. Necesssary if campaign is not mapped in campaign_releases.json
+#  . GEN_CMSSW: Name of the custom CMSSW tarball
+#  o MINIAOD_ARCH: SCRAM arch for the miniaodsim step
+#  - MINIAOD_CAMPAIGN: Production campaign for the miniaod step. If one of the standard campaigns, gen, rawsim, and recosim campaigns can be inferred from the map
+#  . MINIAOD_RELEASE: CMSSW release (full name) for the rawsim, recosim, and miniaodsim steps. Necesssary if campaign is not mapped in campaign_releases.json
+#  . MINIAOD_CMSSW: Name of the custom CMSSW tarball
+#  o RECO_ARCH: SCRAM arch for the rawsim and recosim steps
+#  . RECO_CAMPAIGN: CMSSW release (full name) for the rawsim, recosim, and miniaodsim steps. Necesssary if campaign is not mapped in campaign_releases.json
+#  . RECO_RELEASE: CMSSW release (full name) for the rawsim, recosim, and miniaodsim steps. Necesssary if campaign is not mapped in campaign_releases.json
+#  . RECO_CMSSW: Name of the custom CMSSW tarball
+#  * PANDA_VERSION: Panda version
+#  o PANDA_CMSSW: Custom tarball name
+#  . MIXDATA: Name of the mixdata list file (minus .list.gz), if non-standard
 #  . GRIDPACKS: Space-separated list of gridpack URLs
 #  o MAXWALLTIME: Estimated maximum wall-clock time (in minutes) of the job. Setting a good value increases the chance of getting a slot.
+#  o NCPU: Number of cores per job. Use 1 for powheg jobs.
+
+if [ $TASKTYPE != "gen" ]
+then
+  [ $MINIAOD_CAMPAIGN ] || exitmsg "Missing MINIAOD_CAMPAIGN" 1
+  [ $MINIAOD_ARCH ] || MINIAOD_ARCH=$($TASKDIR/read_confmap.py miniaod.${MINIAOD_CAMPAIGN}.arch)
+  [ $MINIAOD_ARCH ] || exitmsg "Unknown MINIAOD_ARCH for non-standard campaign" 1
+  [ $MINIAOD_RELEASE ] || MINIAOD_RELEASE=$($TASKDIR/read_confmap.py miniaod.${MINIAOD_CAMPAIGN}.release)
+  [ $MINIAOD_RELEASE ] || exitmsg "Unknown MINIAOD_RELEASE for non-standard campaign" 1
+  [ $RECO_CAMPAIGN ] || RECO_CAMPAIGN=$($TASKDIR/read_confmap.py miniaod.${MINIAOD_CAMPAIGN}.parent)
+  [ $RECO_CAMPAIGN ] || exitmsg "Unknown RECO_CAMPAIGN for non-standard miniaod" 1
+  [ $RECO_ARCH ] || RECO_ARCH=$($TASKDIR/read_confmap.py digireco.${RECO_CAMPAIGN}.arch)
+  [ $RECO_ARCH ] || exitmsg "Unknown RECO_ARCH for non-standard campaign" 1
+  [ $RECO_RELEASE ] || RECO_RELEASE=$($TASKDIR/read_confmap.py digireco.${RECO_CAMPAIGN}.release)
+  [ $RECO_RELEASE ] || exitmsg "Unknown RECO_RELEASE for non-standard campaign" 1
+  [ $GEN_CAMPAIGN ] || GEN_CAMPAIGN=$($TASKDIR/read_confmap.py digireco.${RECO_CAMPAIGN}.parent)
+  [ $MIXDATA ] || MIXDATA=$($TASKDIR/read_confmap.py digireco.${RECO_CAMPAIGN}.mix)
+  [ $MIXDATA ] || exitmsg "Unknown MIXDATA for non-standard campaign" 1
+fi
+
+[ $GEN_CAMPAIGN ] || exitmsg "Missing GEN_CAMPAIGN" 1
+[ $GEN_ARCH ] || GEN_ARCH=$($TASKDIR/read_confmap.py gen.${GEN_CAMPAIGN}.arch)
+[ $GEN_ARCH ] || exitmsg "Unknown GEN_ARCH for non-standard campaign" 1
+[ $GEN_RELEASE ] || GEN_RELEASE=$($TASKDIR/read_confmap.py gen.${GEN_CAMPAIGN}.release)
+[ $GEN_RELEASE ] || exitmsg "Unknown GEN_RELEASE for non-standard campaign" 1
+
+[ $PANDA_VERSION ] || exitmsg "Missing PANDA_VERSION" 1
+PANDA_RELEASE=$($TASKDIR/read_confmap.py panda.${PANDA_VERSION}.release)
+[ $PANDA_RELEASE ] || exitmsg "Invalid PANDA_VERSION" 1
 
 if [ "$TEST" = true ] || [ "$TEST" = interactive ]
 then
   LOCALTEST='+Submit_LocalTest = 30'
   REQUIREMENTS='requirements = isUndefined(GLIDEIN_Site)'
-  REQUEST_CPUS=1
+  NCPU=1
   [ $NEVENTS ] || NEVENTS=100
   NJOBS=1
 else
@@ -72,7 +109,7 @@ else
                    ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms" || BOSCOGroup == "paus") ) \
                  ) && \
                  '$($TASKDIR/exclusions.py)
-  REQUEST_CPUS=8
+  [ $NCPU ] || NCPU=8
 fi
 
 if [ $NJOBS -gt 1000 ]
@@ -105,32 +142,56 @@ fi
 
 tar czf $LOGDIR/$TASKNAME/certificates.tar.gz -C /etc/grid-security certificates
 
-INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$TASKDIR/cmssw.sh,$TASKDIR/confs/$TASKNAME/,$TASKDIR/cmssw/panda_${PANDA_RELEASE}.tar.gz"
+cp $TASKDIR/confs/$TASKNAME/conf.sh $LOGDIR/$TASKNAME/conf.sh
 
-if [ "$GEN_CMSSW" ] && [ -e $TASKDIR/cmssw/${GEN_CMSSW}.tar.gz ]
+if [ $TASKTYPE != "gen" ]
+then
+  echo "MINIAOD_CAMPAIGN=$MINIAOD_CAMPAIGN" >> $LOGDIR/$TASKNAME/conf.sh
+  echo "MINIAOD_ARCH=$MINIAOD_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
+  echo "MINIAOD_RELEASE=$MINIAOD_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
+  echo "RECO_CAMPAIGN=$RECO_CAMPAIGN" >> $LOGDIR/$TASKNAME/conf.sh
+  echo "RECO_ARCH=$RECO_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
+  echo "RECO_RELEASE=$RECO_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
+  echo "MIXDATA=$MIXDATA" >> $LOGDIR/$TASKNAME/conf.sh
+fi
+
+echo "GEN_CAMPAIGN=$GEN_CAMPAIGN" >> $LOGDIR/$TASKNAME/conf.sh
+echo "GEN_ARCH=$GEN_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
+echo "GEN_RELEASE=$GEN_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
+echo "PANDA_VERSION=$PANDA_VERSION" >> $LOGDIR/$TASKNAME/conf.sh
+echo "PANDA_RELEASE=$PANDA_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
+echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
+
+INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py,$TASKDIR/cmssw/panda_${PANDA_VERSION}.tar.gz"
+
+if [ $TASKTYPE != "gen" ]
+then
+  if [ $RECO_CMSSW ]
+  then
+    INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${RECO_CMSSW}.tar.gz
+  fi
+  if [ $MINIAOD_CMSSW ]
+  then
+    INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${MINIAOD_CMSSW}.tar.gz
+  fi
+fi
+
+if [ $GEN_CMSSW ]
 then
   INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${GEN_CMSSW}.tar.gz
 fi
-if [ "$RAW_CMSSW" ] && [ -e $TASKDIR/cmssw/${RAW_CMSSW}.tar.gz ]
+if [ $PANDA_CMSSW ]
 then
-  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${RAW_CMSSW}.tar.gz
-fi
-if [ "$RECO_CMSSW" ] && [ -e $TASKDIR/cmssw/${RECO_CMSSW}.tar.gz ]
-then
-  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${RECO_CMSSW}.tar.gz
-fi
-if [ "$MINIAOD_CMSSW" ] && [ -e $TASKDIR/cmssw/${MINIAOD_CMSSW}.tar.gz ]
-then
-  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${MINIAOD_CMSSW}.tar.gz
+  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz
 fi
 
 if [ $TASKTYPE = "gen" ]
 then
-  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/genpanda_${PANDA_RELEASE}.py
+  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/genpanda_${PANDA_VERSION}.py
   [ "$MAXWALLTIME" ] || MAXWALLTIME=180
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
 then
-  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/rawsim_${RECO_RELEASE}.py,$TASKDIR/pycfg/recosim_${RECO_RELEASE}.py,$TASKDIR/pycfg/miniaodsim_${RECO_RELEASE}.py,$TASKDIR/pycfg/panda_${PANDA_RELEASE}.py,$TASKDIR/mixdata/mixdata_${MIXDATA}.list.gz
+  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/{gen,rawsim,recosim,miniaodsim}_cfg.py,$TASKDIR/pycfg/rawsim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/recosim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/miniaodsim_${MINIAOD_CAMPAIGN}.py,$TASKDIR/pycfg/panda_${PANDA_VERSION}.py,$TASKDIR/mixdata/mixdata_${MIXDATA}.list.gz
   [ "$MAXWALLTIME" ] || MAXWALLTIME=480
 fi
 
@@ -173,7 +234,7 @@ error = '$LOGDIR/$TASKNAME/'$(ClusterId).$(Process).err
 log = '$LOGDIR/$TASKNAME/'$(ClusterId).$(Process).log
 environment = "DESTINATION='$DESTINATION'"
 '"$REQUIREMENTS"'
-request_cpus = '$REQUEST_CPUS'
+request_cpus = '$NCPU'
 rank = Mips
 arguments = "'$TASKTYPE' '$TASKNAME' '$NEVENTS' $(ClusterId) $(Process)"
 on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
