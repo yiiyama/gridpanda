@@ -167,22 +167,15 @@ echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
 
 INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz"
 
+[ -e $TASKDIR/confs/$TASKNAME/gen.sh ] && INPUTFILES=$INPUTFILES,$TASKDIR/confs/$TASKNAME/gen.sh
+
 if [ $TASKTYPE != "gen" ]
 then
-  if [ $RECO_CMSSW ]
-  then
-    INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${RECO_CMSSW}.tar.gz
-  fi
-  if [ $MINIAOD_CMSSW ]
-  then
-    INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${MINIAOD_CMSSW}.tar.gz
-  fi
+  [ $RECO_CMSSW ] && INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${RECO_CMSSW}.tar.gz
+  [ $MINIAOD_CMSSW ] && INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${MINIAOD_CMSSW}.tar.gz
 fi
 
-if [ $GEN_CMSSW ]
-then
-  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${GEN_CMSSW}.tar.gz
-fi
+[ $GEN_CMSSW ] && INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${GEN_CMSSW}.tar.gz
 
 INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/gen_cfg.py
 

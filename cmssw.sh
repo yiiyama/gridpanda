@@ -2,7 +2,7 @@
 
 ARCH=$1
 RELEASE=$2
-TAG=$3
+STEP=$3
 shift 3
 ARGS="$@"
 
@@ -10,7 +10,7 @@ source /cvmfs/cms.cern.ch/cmsset_default.sh
 
 export SCRAM_ARCH=$ARCH
 
-WORKAREA=${TAG}_${RELEASE}
+WORKAREA=${STEP}_${RELEASE}
 
 [ -e $WORKAREA ] || scram p -n $WORKAREA CMSSW ${RELEASE}
 cd $WORKAREA
@@ -36,7 +36,17 @@ eval `scram runtime -sh`
 
 cd ..
 
-CFG=${TAG}_cfg.py
+if [ -e input_files_${STEP}.list ]
+then
+  while read LINE
+  do
+    ARGS="$ARGS inputFiles=file:$LINE"
+  done
+fi
+
+ARGS="$ARGS outputFile=${STEP}.root"
+
+CFG=${STEP}_cfg.py
 
 echo cmsRun $CFG $ARGS
 cmsRun $CFG $ARGS
