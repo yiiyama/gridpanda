@@ -90,6 +90,9 @@ source /cvmfs/cms.cern.ch/cmsset_default.sh
 
 [ $GEN_CMSSW ] && mv ${GEN_CMSSW}.tar.gz gen_${GEN_RELEASE}.tar.gz
 
+[ $PANDA_CMSSW ] || PANDA_CMSSW=panda_${PANDA_VERSION}
+mv ${PANDA_CMSSW}.tar.gz panda_${PANDA_RELEASE}.tar.gz
+
 mv gen.py _gen.py
 
 if [ $TASKTYPE = "gen" ]
@@ -109,12 +112,13 @@ then
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
 then
 
+  [ $RECO_CMSSW ] && mv ${RECO_CMSSW}.tar.gz rawsim_${RECO_RELEASE}.tar.gz
+  [ $MINIAOD_CMSSW ] && mv ${MINIAOD_CMSSW}.tar.gz miniaodsim_${MINIAOD_RELEASE}.tar.gz
+
   echo ""
   echo "[GEN STEP]"
   ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS outputFile=gen.root randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
  
-  [ "$RECO_CMSSW" ] && mv ${RAW_CMSSW}.tar.gz rawsim_${RECO_RELEASE}.tar.gz
-
   mv rawsim_${RECO_CAMPAIGN}.py _rawsim.py
 
   gunzip mixdata_${MIXDATA}.list.gz
@@ -131,7 +135,8 @@ then
   [ $RC -ne 0 ] && exit $RC
   rm gen.root
 
-  [ "$RECO_CMSSW" ] && mv ${RECO_CMSSW}.tar.gz recosim_${RECO_RELEASE}.tar.gz
+  # reuse the release area
+  mv {raw,reco}sim_${RECO_RELEASE}
 
   mv recosim_${RECO_CAMPAIGN}.py _recosim.py
   
@@ -139,8 +144,6 @@ then
   echo "[RECO STEP]"
   ./cmssw.sh $RECO_ARCH $RECO_RELEASE recosim ncpu=$NCPU inputFiles=file:rawsim.root outputFile=recosim.root randomizeSeeds=True || exit $?
   rm rawsim.root
-
-  [ "$MINIAOD_CMSSW" ] && mv ${MINIAOD_CMSSW}.tar.gz miniaodsim_${MINIAOD_RELEASE}.tar.gz
 
   mv miniaodsim_${MINIAOD_CAMPAIGN}.py _miniaodsim.py
   

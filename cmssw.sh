@@ -10,11 +10,14 @@ source /cvmfs/cms.cern.ch/cmsset_default.sh
 
 export SCRAM_ARCH=$ARCH
 
-if [ -e ${TAG}_${RELEASE}.tar.gz ]
+WORKAREA=${TAG}_${RELEASE}
+
+[ -e $WORKAREA ] || scram p -n $WORKAREA CMSSW ${RELEASE}
+cd $WORKAREA
+
+if [ -e ../${WORKAREA}.tar.gz ]
 then
-  scram p -n ${TAG}_${RELEASE} CMSSW ${RELEASE}
-  cd ${TAG}_${RELEASE}
-  tar xzf ../${TAG}_${RELEASE}.tar.gz
+  tar xzf ../${WORKAREA}.tar.gz
 
   if [ -d myext ]
   then
@@ -25,14 +28,13 @@ then
       scram setup $EXT
     done
   fi
-else
-  scram p CMSSW ${RELEASE}
-  cd ${RELEASE}
 fi
 
+# in case the work area was renamed
+scram b ProjectRename
 eval `scram runtime -sh`
 
-cd -
+cd ..
 
 CFG=${TAG}_cfg.py
 

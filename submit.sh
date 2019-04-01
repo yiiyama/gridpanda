@@ -88,6 +88,7 @@ fi
 PANDA_ARCH=$($TASKDIR/read_confmap.py panda.${PANDA_VERSION}.arch)
 [ $PANDA_ARCH ] || exitmsg "Invalid PANDA_VERSION" 1
 PANDA_RELEASE=$($TASKDIR/read_confmap.py panda.${PANDA_VERSION}.release)
+[ $PANDA_CMSSW ] || PANDA_CMSSW=panda_${PANDA_VERSION}
 
 if [ "$TEST" = true ] || [ "$TEST" = interactive ]
 then
@@ -107,7 +108,7 @@ else
                    isUndefined(IS_GLIDEIN) || \
                    ( OSGVO_OS_STRING == "RHEL 6" && HAS_CVMFS_cms_cern_ch == True ) || \
                    ( HAS_SINGULARITY == true || GLIDEIN_REQUIRED_OS == "rhel6" ) || \
-                   ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms" || BOSCOGroup == "paus") ) \
+                   ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms") ) \
                  ) && \
                  '$($TASKDIR/exclusions.py)
   [ $NCPU ] || NCPU=8
@@ -164,7 +165,7 @@ echo "PANDA_ARCH=$PANDA_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
 echo "PANDA_RELEASE=$PANDA_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
 echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
 
-INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py,$TASKDIR/cmssw/panda_${PANDA_VERSION}.tar.gz"
+INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz"
 
 if [ $TASKTYPE != "gen" ]
 then
@@ -181,10 +182,6 @@ fi
 if [ $GEN_CMSSW ]
 then
   INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${GEN_CMSSW}.tar.gz
-fi
-if [ $PANDA_CMSSW ]
-then
-  INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz
 fi
 
 INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/gen_cfg.py
