@@ -50,3 +50,5 @@ CFG=${STEP}_cfg.py
 
 echo cmsRun $CFG $ARGS
 cmsRun $CFG $ARGS
+
+echo ${STEP}.root > output_files_${STEP}.list

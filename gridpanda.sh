@@ -113,8 +113,9 @@ then
 
   echo ""
   echo "[PANDA STEP]"
-  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda ncpu=$NCPU inputFiles=file:gen.root || exit $?
-  [ $TASKTYPE = "gen" ] && rm gen.root
+  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda || exit $?
+
+  cat input_files_panda.list | xargs rm
 
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
 then
