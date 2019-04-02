@@ -60,34 +60,36 @@ source $TASKDIR/confs/$TASKNAME/conf.sh || exit 1
 #  o MAXWALLTIME: Estimated maximum wall-clock time (in minutes) of the job. Setting a good value increases the chance of getting a slot.
 #  o NCPU: Number of cores per job. Use 1 for powheg jobs.
 
+CONFMAP=$TASKDIR/tools/read_confmap.py
+
 if [ $TASKTYPE != "gen" ]
 then
   [ $MINIAOD_CAMPAIGN ] || exitmsg "Missing MINIAOD_CAMPAIGN" 1
-  [ $MINIAOD_ARCH ] || MINIAOD_ARCH=$($TASKDIR/read_confmap.py miniaod.${MINIAOD_CAMPAIGN}.arch)
+  [ $MINIAOD_ARCH ] || MINIAOD_ARCH=$($CONFMAP miniaod.${MINIAOD_CAMPAIGN}.arch)
   [ $MINIAOD_ARCH ] || exitmsg "Unknown MINIAOD_ARCH for non-standard campaign" 1
-  [ $MINIAOD_RELEASE ] || MINIAOD_RELEASE=$($TASKDIR/read_confmap.py miniaod.${MINIAOD_CAMPAIGN}.release)
+  [ $MINIAOD_RELEASE ] || MINIAOD_RELEASE=$($CONFMAP miniaod.${MINIAOD_CAMPAIGN}.release)
   [ $MINIAOD_RELEASE ] || exitmsg "Unknown MINIAOD_RELEASE for non-standard campaign" 1
-  [ $RECO_CAMPAIGN ] || RECO_CAMPAIGN=$($TASKDIR/read_confmap.py miniaod.${MINIAOD_CAMPAIGN}.parent)
+  [ $RECO_CAMPAIGN ] || RECO_CAMPAIGN=$($CONFMAP miniaod.${MINIAOD_CAMPAIGN}.parent)
   [ $RECO_CAMPAIGN ] || exitmsg "Unknown RECO_CAMPAIGN for non-standard miniaod" 1
-  [ $RECO_ARCH ] || RECO_ARCH=$($TASKDIR/read_confmap.py digireco.${RECO_CAMPAIGN}.arch)
+  [ $RECO_ARCH ] || RECO_ARCH=$($CONFMAP digireco.${RECO_CAMPAIGN}.arch)
   [ $RECO_ARCH ] || exitmsg "Unknown RECO_ARCH for non-standard campaign" 1
-  [ $RECO_RELEASE ] || RECO_RELEASE=$($TASKDIR/read_confmap.py digireco.${RECO_CAMPAIGN}.release)
+  [ $RECO_RELEASE ] || RECO_RELEASE=$($CONFMAP digireco.${RECO_CAMPAIGN}.release)
   [ $RECO_RELEASE ] || exitmsg "Unknown RECO_RELEASE for non-standard campaign" 1
-  [ $GEN_CAMPAIGN ] || GEN_CAMPAIGN=$($TASKDIR/read_confmap.py digireco.${RECO_CAMPAIGN}.parent)
-  [ $MIXDATA ] || MIXDATA=$($TASKDIR/read_confmap.py digireco.${RECO_CAMPAIGN}.mix)
+  [ $GEN_CAMPAIGN ] || GEN_CAMPAIGN=$($CONFMAP digireco.${RECO_CAMPAIGN}.parent)
+  [ $MIXDATA ] || MIXDATA=$($CONFMAP digireco.${RECO_CAMPAIGN}.mix)
   [ $MIXDATA ] || exitmsg "Unknown MIXDATA for non-standard campaign" 1
 fi
 
 [ $GEN_CAMPAIGN ] || exitmsg "Missing GEN_CAMPAIGN" 1
-[ $GEN_ARCH ] || GEN_ARCH=$($TASKDIR/read_confmap.py gen.${GEN_CAMPAIGN}.arch)
+[ $GEN_ARCH ] || GEN_ARCH=$($CONFMAP gen.${GEN_CAMPAIGN}.arch)
 [ $GEN_ARCH ] || exitmsg "Unknown GEN_ARCH for non-standard campaign" 1
-[ $GEN_RELEASE ] || GEN_RELEASE=$($TASKDIR/read_confmap.py gen.${GEN_CAMPAIGN}.release)
+[ $GEN_RELEASE ] || GEN_RELEASE=$($CONFMAP gen.${GEN_CAMPAIGN}.release)
 [ $GEN_RELEASE ] || exitmsg "Unknown GEN_RELEASE for non-standard campaign" 1
 
 [ $PANDA_VERSION ] || exitmsg "Missing PANDA_VERSION" 1
-PANDA_ARCH=$($TASKDIR/read_confmap.py panda.${PANDA_VERSION}.arch)
+PANDA_ARCH=$($CONFMAP panda.${PANDA_VERSION}.arch)
 [ $PANDA_ARCH ] || exitmsg "Invalid PANDA_VERSION" 1
-PANDA_RELEASE=$($TASKDIR/read_confmap.py panda.${PANDA_VERSION}.release)
+PANDA_RELEASE=$($CONFMAP panda.${PANDA_VERSION}.release)
 [ $PANDA_CMSSW ] || PANDA_CMSSW=panda_${PANDA_VERSION}
 
 if [ "$TEST" = true ] || [ "$TEST" = interactive ]
@@ -110,7 +112,7 @@ else
                    ( HAS_SINGULARITY == true || GLIDEIN_REQUIRED_OS == "rhel6" ) || \
                    ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms") ) \
                  ) && \
-                 '$($TASKDIR/exclusions.py)
+                 '$($TASKDIR/tools/exclusions.py)
   [ $NCPU ] || NCPU=8
 fi
 
@@ -165,7 +167,7 @@ echo "PANDA_ARCH=$PANDA_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
 echo "PANDA_RELEASE=$PANDA_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
 echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
 
-INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz"
+INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz"
 
 [ -e $TASKDIR/confs/$TASKNAME/gen.sh ] && INPUTFILES=$INPUTFILES,$TASKDIR/confs/$TASKNAME/gen.sh
 

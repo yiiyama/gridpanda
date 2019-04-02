@@ -41,7 +41,7 @@ then
   while read LINE
   do
     ARGS="$ARGS inputFiles=file:$LINE"
-  done
+  done < input_files_${STEP}.list
 fi
 
 ARGS="$ARGS outputFile=${STEP}.root"
