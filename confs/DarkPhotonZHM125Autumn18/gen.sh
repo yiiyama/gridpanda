@@ -21,7 +21,7 @@ done
 
 for I in $(seq 1 $NCPU)
 do
-  wait ${PIDS[$I]}
+  wait ${PIDS[$I]} || exit $?
   mv gen${I}/gen.root gen${I}.root
   
   echo ""
