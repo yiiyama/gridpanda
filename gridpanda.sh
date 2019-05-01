@@ -90,8 +90,11 @@ source /cvmfs/cms.cern.ch/cmsset_default.sh
 
 [ $GEN_CMSSW ] && mv ${GEN_CMSSW}.tar.gz gen_${GEN_RELEASE}.tar.gz
 
-[ $PANDA_CMSSW ] || PANDA_CMSSW=panda_${PANDA_VERSION}
-mv ${PANDA_CMSSW}.tar.gz panda_${PANDA_RELEASE}.tar.gz
+if [ $PANDA_VERSION ]
+then
+  [ $PANDA_CMSSW ] || PANDA_CMSSW=panda_${PANDA_VERSION}
+  mv ${PANDA_CMSSW}.tar.gz panda_${PANDA_RELEASE}.tar.gz
+fi
 
 mv gen.py _gen.py
 
@@ -108,14 +111,13 @@ then
     ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI $GRIDPACKS_ARG || exit $?
   fi
 
-  mv genpanda_${PANDA_VERSION}.py panda_cfg.py
-  mv output_files_gen.list input_files_panda.list
+  LASTSTEP=gen
 
-  echo ""
-  echo "[PANDA STEP]"
-  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda || exit $?
-
-  cat input_files_panda.list | xargs rm
+  if [ $PANDA_VERSION ]
+  then
+    mv genpanda_${PANDA_VERSION}.py panda_cfg.py
+    mv output_files_gen.list input_files_panda.list
+  fi
 
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
 then
@@ -131,7 +133,7 @@ then
   else
     ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
   fi
- 
+
   mv rawsim_${RECO_CAMPAIGN}.py _rawsim.py
   mv output_files_gen.list input_files_rawsim.list
 
@@ -171,14 +173,24 @@ then
 
   cat input_files_miniaodsim.list | xargs rm
 
-  mv panda_{${PANDA_VERSION},cfg}.py
-  mv output_files_miniaodsim.list input_files_panda.list
-  
+  LASTSTEP=miniaodsim
+
+  if [ $PANDA_VERSION ]
+  then
+    mv panda_{${PANDA_VERSION},cfg}.py
+    mv output_files_miniaodsim.list input_files_panda.list
+  fi
+
+fi
+
+if [ $PANDA_VERSION ]
+then
   echo ""
   echo "[PANDA STEP]"
   ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda || exit $?
-  [ $TASKTYPE = "fullsim" ] && cat input_files_panda.list | xargs rm
+  [ $TASKTYPE != "fullsimmini" ] && cat input_files_panda.list | xargs rm
 
+  LASTSTEP=panda
 fi
 
 echo ""
@@ -217,11 +229,14 @@ then
     sleep 2
   done
 else
-  for att in $(seq 0 10)
+  while read FILE
   do
-    echo $COPYCMD file://$PWD/panda.root $DESTINATION/$TASKNAME/$JOBID.root
-    $COPYCMD file://$PWD/panda.root $DESTINATION/$TASKNAME/$JOBID.root && break
-    gfal-rm $DESTINATION/$TASKNAME/$JOBID.root
-    sleep 2
-  done
+    for att in $(seq 0 10)
+    do
+      echo $COPYCMD file://$PWD/$FILE $DESTINATION/$TASKNAME/$JOBID.root
+      $COPYCMD file://$PWD/$FILE $DESTINATION/$TASKNAME/$JOBID.root && break
+      gfal-rm $DESTINATION/$TASKNAME/$JOBID.root
+      sleep 2
+    done
+  done < output_files_${LASTSTEP}.list
 fi

@@ -36,6 +36,11 @@ function exitmsg() {
 
 [ $TASKTYPE ] || exitmsg "Usage: submit.sh (gen|fullsim|fullsimmini) TASKNAME NEVENTS NJOBS" 0
 
+if ! voms-proxy-info --exists
+then
+  voms-proxy-init --valid 192:00 -voms cms || exit 1
+fi
+
 TASKDIR=$(cd $(dirname $(readlink -f $0)); pwd)
 EXECUTABLE=gridpanda.sh
 
@@ -53,7 +58,7 @@ source $TASKDIR/confs/$TASKNAME/conf.sh || exit 1
 #  . RECO_CAMPAIGN: CMSSW release (full name) for the rawsim, recosim, and miniaodsim steps. Necesssary if campaign is not mapped in campaign_releases.json
 #  . RECO_RELEASE: CMSSW release (full name) for the rawsim, recosim, and miniaodsim steps. Necesssary if campaign is not mapped in campaign_releases.json
 #  . RECO_CMSSW: Name of the custom CMSSW tarball
-#  * PANDA_VERSION: Panda version
+#  o PANDA_VERSION: Panda version
 #  o PANDA_CMSSW: Custom tarball name
 #  . MIXDATA: Name of the mixdata list file (minus .list.gz), if non-standard
 #  . GRIDPACKS: Space-separated list of gridpack URLs
@@ -86,11 +91,13 @@ fi
 [ $GEN_RELEASE ] || GEN_RELEASE=$($CONFMAP gen.${GEN_CAMPAIGN}.release)
 [ $GEN_RELEASE ] || exitmsg "Unknown GEN_RELEASE for non-standard campaign" 1
 
-[ $PANDA_VERSION ] || exitmsg "Missing PANDA_VERSION" 1
-PANDA_ARCH=$($CONFMAP panda.${PANDA_VERSION}.arch)
-[ $PANDA_ARCH ] || exitmsg "Invalid PANDA_VERSION" 1
-PANDA_RELEASE=$($CONFMAP panda.${PANDA_VERSION}.release)
-[ $PANDA_CMSSW ] || PANDA_CMSSW=panda_${PANDA_VERSION}
+if [ $PANDA_VERSION ]
+then
+  PANDA_ARCH=$($CONFMAP panda.${PANDA_VERSION}.arch)
+  [ $PANDA_ARCH ] || exitmsg "Invalid PANDA_VERSION" 1
+  PANDA_RELEASE=$($CONFMAP panda.${PANDA_VERSION}.release)
+  [ $PANDA_CMSSW ] || PANDA_CMSSW=panda_${PANDA_VERSION}
+fi
 
 if [ "$TEST" = true ] || [ "$TEST" = interactive ]
 then
@@ -162,12 +169,17 @@ fi
 echo "GEN_CAMPAIGN=$GEN_CAMPAIGN" >> $LOGDIR/$TASKNAME/conf.sh
 echo "GEN_ARCH=$GEN_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
 echo "GEN_RELEASE=$GEN_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
-echo "PANDA_VERSION=$PANDA_VERSION" >> $LOGDIR/$TASKNAME/conf.sh
-echo "PANDA_ARCH=$PANDA_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
-echo "PANDA_RELEASE=$PANDA_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
+if [ $PANDA_VERSION ]
+then
+  echo "PANDA_VERSION=$PANDA_VERSION" >> $LOGDIR/$TASKNAME/conf.sh
+  echo "PANDA_ARCH=$PANDA_ARCH" >> $LOGDIR/$TASKNAME/conf.sh
+  echo "PANDA_RELEASE=$PANDA_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
+fi
 echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
 
-INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz"
+INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py"
+
+[ $PANDA_VERSION ] && INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz
 
 [ -e $TASKDIR/confs/$TASKNAME/gen.sh ] && INPUTFILES=$INPUTFILES,$TASKDIR/confs/$TASKNAME/gen.sh
 
@@ -183,7 +195,8 @@ INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/gen_cfg.py
 
 if [ $TASKTYPE = "gen" ]
 then
-  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/genpanda_${PANDA_VERSION}.py
+  INPUTFILES=$INPUTFILES
+  [ $PANDA_VERSION ] && INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/genpanda_${PANDA_VERSION}.py
   [ "$MAXWALLTIME" ] || MAXWALLTIME=180
 elif [ $TASKTYPE = "fullsim" ] || [ $TASKTYPE = "fullsimmini" ]
 then
@@ -191,7 +204,8 @@ then
   do
     INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/${STEP}_cfg.py
   done
-  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/rawsim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/recosim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/miniaodsim_${MINIAOD_CAMPAIGN}.py,$TASKDIR/pycfg/panda_${PANDA_VERSION}.py,$TASKDIR/mixdata/mixdata_${MIXDATA}.list.gz
+  INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/rawsim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/recosim_${RECO_CAMPAIGN}.py,$TASKDIR/pycfg/miniaodsim_${MINIAOD_CAMPAIGN}.py,$TASKDIR/mixdata/mixdata_${MIXDATA}.list.gz
+  [ $PANDA_VERSION ] && INPUTFILES=$INPUTFILES,$TASKDIR/pycfg/panda_${PANDA_VERSION}.py
   [ "$MAXWALLTIME" ] || MAXWALLTIME=480
 fi
 

@@ -1,0 +1,3 @@
+GRIDPACKS="gsiftp://eoscmsftp.cern.ch:2811//eos/cms/store/user/yiiyama/gridpacks/Raman_MonoH/2HDMa_gg_sinp_0p35_tanb_1p0_mXd_10_MH3_700_MH4_400_MH2_700_MHC_700_slc6_amd64_gcc630_CMSSW_9_3_8_tarball.tar.xz"
+MINIAOD_CAMPAIGN=RunIIFall17MiniAOD
+NCPU=8
