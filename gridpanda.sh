@@ -70,6 +70,7 @@ fi
 echo "[HOSTNAME]"
 hostname
 uname -a
+id
 echo ""
 
 tar xzf certificates.tar.gz
@@ -87,9 +88,9 @@ echo ""
 echo "[DIRECTORY CONTENT]"
 ls -l
 
-singularity exec /cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7 echo "Singularity detected"
-if [ $? -eq 0 ]
+if which singularity > /dev/null 2>&1
 then
+  singularity exec /cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7 echo "Singularity detected" || exit $?
   CMSSW_EXEC=$PWD/cmssw_singularity.sh
 else
   CMSSW_EXEC=$PWD/cmssw.sh
