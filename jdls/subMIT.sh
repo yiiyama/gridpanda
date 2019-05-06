@@ -5,19 +5,23 @@ then
   LOCALTEST_CLASSAD='+Submit_LocalTest = 30'
   REQUIREMENTS='requirements = isUndefined(GLIDEIN_Site)'
 else
+  if [ $REQUIRED_OS = "rhel6" ]
+  then
+    OSGVO_OS_STRING="RHEL 6"
+  else
+    OSGVO_OS_STRING="CentOS 7"
+  fi
+
   REQUIREMENTS='requirements = Arch == "X86_64" && ( \
                    isUndefined(IS_GLIDEIN) || \
-                   ( OSGVO_OS_STRING == "RHEL 6" && HAS_CVMFS_cms_cern_ch == True ) || \
-                   ( HAS_SINGULARITY == true || GLIDEIN_REQUIRED_OS == "rhel6" ) || \
+                   ( OSGVO_OS_STRING == "'$OSGVO_OS_STRING'" && HAS_CVMFS_cms_cern_ch == True ) || \
+                   ( HAS_SINGULARITY == true || GLIDEIN_REQUIRED_OS == "'$REQUIRED_OS'" ) || \
                    ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms") ) \
                  ) && \
                  '$($(dirname $0)/../tools/exclusions.py)
 fi
 
-if [ "$REQUIRED_OS" ]
-then
-  REQUIRED_OS_CLASSAD='+REQUIRED_OS = "'$REQUIRED_OS'"'
-fi
+REQUIRED_OS_CLASSAD='+REQUIRED_OS = "'$REQUIRED_OS'"'
 
 echo ''"$REQUIREMENTS"'
 +AccountingGroup = "analysis.'$(id -un)'"
