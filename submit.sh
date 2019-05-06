@@ -37,12 +37,11 @@ function exitmsg() {
 
 [ $TASKTYPE ] || exitmsg "Usage: submit.sh (gen|fullsim|fullsimmini) TASKNAME NEVENTS NJOBS" 0
 
-if ! voms-proxy-info --exists
+export X509_USER_PROXY=$PWD/x509up_u$(id -u)
+if ! [ -e $X509_USER_PROXY ] || [ $(voms-proxy-info --timeleft --file $X509_USER_PROXY) -lt $((3600*24)) ]
 then
-  voms-proxy-init --valid 192:00 -voms cms || exit 1
+  voms-proxy-init --valid 192:00 -voms cms --out $X509_USER_PROXY || exit 1
 fi
-
-cp /tmp/x509up_u$(id -u) .
 
 TASKDIR=$(cd $(dirname $(readlink -f $0)); pwd)
 EXECUTABLE=gridpanda.sh
@@ -189,7 +188,7 @@ then
 fi
 echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
 
-INPUTFILES="x509up_u$(id -u),$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/tools/cmssw_singularity.sh,$TASKDIR/confs/$TASKNAME/gen.py"
+INPUTFILES="$X509_USER_PROXY,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/tools/cmssw_singularity.sh,$TASKDIR/confs/$TASKNAME/gen.py"
 
 #INPUTFILES=$INPUTFILES,'/var/local/lcg-cp.tar.gz'
 
@@ -258,6 +257,7 @@ if [[ $PANDA_ARCH =~ ^slc6 ]]
 then
   REQUIRED_OS=rhel6
 elif [[ $PANDA_ARCH =~ ^slc7 ]]
+then
   REQUIRED_OS=rhel7
 fi
 
@@ -278,8 +278,7 @@ rank = Mips
 arguments = "'$TASKTYPE' '$TASKNAME' '$NEVENTS' $(ClusterId) $(Process)"
 on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
 use_x509userproxy = True
-x509userproxy = x509up_u'$(id -u)'
-' >> $JDL
+x509userproxy = '$X509_USER_PROXY >> $JDL
 
 $TASKDIR/jdls/$JDLTEMPLATE >> $JDL
 

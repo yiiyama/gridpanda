@@ -69,6 +69,7 @@ fi
 
 echo "[HOSTNAME]"
 hostname
+uname -a
 echo ""
 
 tar xzf certificates.tar.gz
