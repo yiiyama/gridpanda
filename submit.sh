@@ -37,14 +37,10 @@ function exitmsg() {
 
 [ $TASKTYPE ] || exitmsg "Usage: submit.sh (gen|fullsim|fullsimmini) TASKNAME NEVENTS NJOBS" 0
 
-export X509_USER_PROXY=$PWD/x509up_u$(id -u)
-if ! [ -e $X509_USER_PROXY ] || [ $(voms-proxy-info --timeleft --file $X509_USER_PROXY) -lt $((3600*24)) ]
-then
-  voms-proxy-init --valid 192:00 -voms cms --out $X509_USER_PROXY || exit 1
-fi
-
 TASKDIR=$(cd $(dirname $(readlink -f $0)); pwd)
 EXECUTABLE=gridpanda.sh
+
+## CONFIG VARIABLES
 
 source $TASKDIR/confs/$TASKNAME/conf.sh || exit 1
 # conf.sh can set the following parameters (*=required for all confs, -=required if TASKTYPE is fullsim or fullsimmini, .=depends on the conf, o=optional):
@@ -126,6 +122,33 @@ then
   exit 1
 fi
 
+## LOG DIRECTORY
+
+mkdir -p $LOGDIR/$TASKNAME
+
+export X509_USER_PROXY=$LOGDIR/$TASKNAME/x509up_u$(id -u)
+if ! [ -e $X509_USER_PROXY ] || [ $(voms-proxy-info --timeleft --file $X509_USER_PROXY) -lt $((3600*24)) ]
+then
+  voms-proxy-init --valid 192:00 -voms cms --out $X509_USER_PROXY || exit 1
+fi
+
+if [ "$TEST" = interactive ]
+then
+  rm -rf $LOGDIR/$TASKNAME/test
+  mkdir $LOGDIR/$TASKNAME/test
+fi
+
+if [ -e $TASKDIR/certificates.tar.gz ]
+then
+  cp $TASKDIR/certificates.tar.gz $LOGDIR/$TASKNAME/certificates.tar.gz
+else
+  tar czf $LOGDIR/$TASKNAME/certificates.tar.gz -C /etc/grid-security certificates
+fi
+
+cp $TASKDIR/confs/$TASKNAME/conf.sh $LOGDIR/$TASKNAME/conf.sh
+
+## DESTINATION DIRECTORY
+
 if [[ $DESTINATION =~ ^gsiftp: ]] || [[ $DESTINATION =~ ^srm: ]]
 then
   MKDIRCMD="gfal-mkdir -p"
@@ -149,22 +172,7 @@ then
   exit 1
 fi
 
-mkdir -p $LOGDIR/$TASKNAME
-
-if [ "$TEST" = interactive ]
-then
-  rm -rf $LOGDIR/$TASKNAME/test
-  mkdir $LOGDIR/$TASKNAME/test
-fi
-
-if [ -e $TASKDIR/certificates.tar.gz ]
-then
-  cp $TASKDIR/certificates.tar.gz $LOGDIR/$TASKNAME/certificates.tar.gz
-else
-  tar czf $LOGDIR/$TASKNAME/certificates.tar.gz -C /etc/grid-security certificates
-fi
-
-cp $TASKDIR/confs/$TASKNAME/conf.sh $LOGDIR/$TASKNAME/conf.sh
+## JOB INPUT FILES
 
 if [ $TASKTYPE != "gen" ]
 then
@@ -249,6 +257,8 @@ then
   echo "  DESTINATION='$DESTINATION' time ./$EXECUTABLE $TASKTYPE $TASKNAME $NEVENTS 12345 0"
   exit 0
 fi
+
+## SUBMIT
 
 # environments that may be used in jdltemplate
 export MAXWALLTIME
