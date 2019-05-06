@@ -86,6 +86,14 @@ echo ""
 echo "[DIRECTORY CONTENT]"
 ls -l
 
+singularity exec /cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7 echo "Singularity detected"
+if [ $? -eq 0 ]
+then
+  CMSSW_EXEC=$PWD/cmssw_singularity.sh
+else
+  CMSSW_EXEC=$PWD/cmssw.sh
+fi
+
 source /cvmfs/cms.cern.ch/cmsset_default.sh
 
 [ $GEN_CMSSW ] && mv ${GEN_CMSSW}.tar.gz gen_${GEN_RELEASE}.tar.gz
@@ -108,7 +116,7 @@ then
   then
     source gen.sh 
   else
-    ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI $GRIDPACKS_ARG || exit $?
+    $CMSSW_EXEC $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
   fi
 
   LASTSTEP=gen
@@ -131,7 +139,7 @@ then
   then
     source gen.sh
   else
-    ./cmssw.sh $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
+    $CMSSW_EXEC $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
   fi
 
   mv rawsim_${RECO_CAMPAIGN}.py _rawsim.py
@@ -145,7 +153,7 @@ then
   for att in $(seq 0 9)
   do
     # this step can fail due to pileup IO error
-    ./cmssw.sh $RECO_ARCH $RECO_RELEASE rawsim ncpu=$NCPU mixdata=$PWD/mixdata.list randomizeSeeds=True && break
+    $CMSSW_EXEC $RECO_ARCH $RECO_RELEASE rawsim ncpu=$NCPU mixdata=$PWD/mixdata.list randomizeSeeds=True && break
   done
   RC=$?
   [ $RC -ne 0 ] && exit $RC
@@ -160,7 +168,7 @@ then
   
   echo ""
   echo "[RECO STEP]"
-  ./cmssw.sh $RECO_ARCH $RECO_RELEASE recosim ncpu=$NCPU randomizeSeeds=True || exit $?
+  $CMSSW_EXEC $RECO_ARCH $RECO_RELEASE recosim ncpu=$NCPU randomizeSeeds=True || exit $?
 
   cat input_files_recosim.list | xargs rm
 
@@ -169,7 +177,7 @@ then
   
   echo ""
   echo "[MINIAOD STEP]"
-  ./cmssw.sh $MINIAOD_ARCH $MINIAOD_RELEASE miniaodsim ncpu=$NCPU randomizeSeeds=True || exit $?
+  $CMSSW_EXEC $MINIAOD_ARCH $MINIAOD_RELEASE miniaodsim ncpu=$NCPU randomizeSeeds=True || exit $?
 
   cat input_files_miniaodsim.list | xargs rm
 
@@ -187,7 +195,7 @@ if [ $PANDA_VERSION ]
 then
   echo ""
   echo "[PANDA STEP]"
-  ./cmssw.sh $PANDA_ARCH $PANDA_RELEASE panda || exit $?
+  $CMSSW_EXEC $PANDA_ARCH $PANDA_RELEASE panda || exit $?
   [ $TASKTYPE != "fullsimmini" ] && cat input_files_panda.list | xargs rm
 
   LASTSTEP=panda
@@ -196,36 +204,43 @@ fi
 echo ""
 echo "[STAGEOUT]"
 
-if which gfal-copy
-then
-  COPYCMD="gfal-copy"
-else
-  COPYCMD="lcg-cp -v -D srmv2 -b"
-  if ! which lcg-cp
-  then
-    tar xzf lcg-cp.tar.gz
-    export PATH=$PWD/lcg-cp:$PATH
-    export LD_LIBRARY_PATH=$PWD/lcg-cp:$LD_LIBRARY_PATH
-  fi
-fi
-
 # DESTINATION is set by condor via the "environment" classad
+
+if [[ $DESTINATION =~ ^gsiftp: ]] || [[ $DESTINATION =~ ^srm: ]]
+then
+  if which gfal-copy
+  then
+    COPYCMD="gfal-copy"
+    REMOVECMD="gfal-rm"
+  else
+    COPYCMD="lcg-cp -v -D srmv2 -b"
+    REMOVECMD="lcg-rm -v -D srmv2 -b"
+    if ! which lcg-cp
+    then
+      tar xzf lcg-cp.tar.gz
+      export PATH=$PWD/lcg-cp:$PATH
+      export LD_LIBRARY_PATH=$PWD/lcg-cp:$LD_LIBRARY_PATH
+    fi
+  fi
+else
+  COPYCMD="cp"
+fi
 
 if [ $TASKTYPE = "fullsimmini" ]
 then
   for att in $(seq 0 10)
   do
-    echo $COPYCMD file://$PWD/panda.root $DESTINATION/$TASKNAME/panda/$JOBID.root
-    $COPYCMD file://$PWD/panda.root $DESTINATION/$TASKNAME/panda/$JOBID.root && break
-    gfal-rm $DESTINATION/$TASKNAME/panda/$JOBID.root
+    echo $COPYCMD $PWD/panda.root $DESTINATION/$TASKNAME/panda/$JOBID.root
+    $COPYCMD $PWD/panda.root $DESTINATION/$TASKNAME/panda/$JOBID.root && break
+    $REMOVECMD $DESTINATION/$TASKNAME/panda/$JOBID.root
     sleep 2
   done
 
   for att in $(seq 0 10)
   do
-    echo $COPYCMD file://$PWD/miniaodsim.root $DESTINATION/$TASKNAME/miniaod/$JOBID.root
-    $COPYCMD file://$PWD/miniaodsim.root $DESTINATION/$TASKNAME/miniaod/$JOBID.root && break
-    gfal-rm $DESTINATION/$TASKNAME/miniaod/$JOBID.root
+    echo $COPYCMD $PWD/miniaodsim.root $DESTINATION/$TASKNAME/miniaod/$JOBID.root
+    $COPYCMD $PWD/miniaodsim.root $DESTINATION/$TASKNAME/miniaod/$JOBID.root && break
+    $REMOVECMD $DESTINATION/$TASKNAME/miniaod/$JOBID.root
     sleep 2
   done
 else
@@ -233,9 +248,9 @@ else
   do
     for att in $(seq 0 10)
     do
-      echo $COPYCMD file://$PWD/$FILE $DESTINATION/$TASKNAME/$JOBID.root
-      $COPYCMD file://$PWD/$FILE $DESTINATION/$TASKNAME/$JOBID.root && break
-      gfal-rm $DESTINATION/$TASKNAME/$JOBID.root
+      echo $COPYCMD $PWD/$FILE $DESTINATION/$TASKNAME/$JOBID.root
+      $COPYCMD $PWD/$FILE $DESTINATION/$TASKNAME/$JOBID.root && break
+      $REMOVECMD $DESTINATION/$TASKNAME/$JOBID.root
       sleep 2
     done
   done < output_files_${LASTSTEP}.list

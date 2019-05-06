@@ -18,9 +18,10 @@ process.maxEvents.input = cms.untracked.int32(options.maxEvents)
 process.source.firstLuminosityBlock = cms.untracked.uint32(options.firstLumi)
 process.source.firstEvent = cms.untracked.uint32(options.firstEvent)
 process.RAWSIMoutput.fileName = cms.untracked.string(options.outputFile)
-process.externalLHEProducer.nEvents = cms.untracked.uint32(options.maxEvents)
-if len(options.gridpacks):
-    process.externalLHEProducer.args = cms.vstring(options.gridpacks)
+if hasattr(process, 'externalLHEProducer'):
+    process.externalLHEProducer.nEvents = cms.untracked.uint32(options.maxEvents)
+    if len(options.gridpacks):
+        process.externalLHEProducer.args = cms.vstring(options.gridpacks)
 
 process.options.numberOfThreads=cms.untracked.uint32(options.ncpu)
 

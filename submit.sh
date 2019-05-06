@@ -1,9 +1,10 @@
 #!/bin/bash
 
 ## EDIT BELOW
-DESTINATION=gsiftp://t3serv010.mit.edu:2811/scratch/yiiyama/gridpanda
+DESTINATION=/eos/cms/store/cmst3/user/yiiyama/hgcal_trig
 #DESTINATION=gsiftp://se01.cmsaf.mit.edu:2811/cms/store/user/yiiyama/gridpanda
-LOGDIR=/work/yiiyama/cms/logs/gridpanda
+LOGDIR=/afs/cern.ch/work/y/yiiyama/gridpanda
+JDLTEMPLATE=cern.sh
 ## EDIT ABOVE
 
 for ARG in $@
@@ -40,6 +41,8 @@ if ! voms-proxy-info --exists
 then
   voms-proxy-init --valid 192:00 -voms cms || exit 1
 fi
+
+cp /tmp/x509up_u$(id -u) .
 
 TASKDIR=$(cd $(dirname $(readlink -f $0)); pwd)
 EXECUTABLE=gridpanda.sh
@@ -101,8 +104,8 @@ fi
 
 if [ "$TEST" = true ] || [ "$TEST" = interactive ]
 then
-  LOCALTEST='+Submit_LocalTest = 30'
-  REQUIREMENTS='requirements = isUndefined(GLIDEIN_Site)'
+  export LOCALTEST=1
+
   NCPU=1
   [ $NEVENTS ] || NEVENTS=100
   NJOBS=1
@@ -113,13 +116,8 @@ else
     exit 1
   fi
 
-  REQUIREMENTS='requirements = Arch == "X86_64" && ( \
-                   isUndefined(IS_GLIDEIN) || \
-                   ( OSGVO_OS_STRING == "RHEL 6" && HAS_CVMFS_cms_cern_ch == True ) || \
-                   ( HAS_SINGULARITY == true || GLIDEIN_REQUIRED_OS == "rhel6" ) || \
-                   ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms") ) \
-                 ) && \
-                 '$($TASKDIR/tools/exclusions.py)
+  export LOCALTEST=0
+
   [ $NCPU ] || NCPU=8
 fi
 
@@ -129,14 +127,23 @@ then
   exit 1
 fi
 
-gfal-mkdir -p $DESTINATION/$TASKNAME
-if [ $TASKTYPE = "fullsimmini" ]
+if [[ $DESTINATION =~ ^gsiftp: ]] || [[ $DESTINATION =~ ^srm: ]]
 then
-  gfal-mkdir -p $DESTINATION/$TASKNAME/miniaod
-  gfal-mkdir -p $DESTINATION/$TASKNAME/panda
+  MKDIRCMD="gfal-mkdir -p"
+  LSCMD="gfal-ls"
+else
+  MKDIRCMD="mkdir -p"
+  LSCMD="ls"
 fi
 
-gfal-ls $DESTINATION/$TASKNAME > /dev/null
+$MKDIRCMD $DESTINATION/$TASKNAME
+if [ $TASKTYPE = "fullsimmini" ]
+then
+  $MKDIRCMD $DESTINATION/$TASKNAME/miniaod
+  $MKDIRCMD $DESTINATION/$TASKNAME/panda
+fi
+
+$LSCMD $DESTINATION/$TASKNAME > /dev/null
 if [ $? -ne 0 ]
 then
   echo "Could not create destination directory. Check your grid credentials."
@@ -151,7 +158,12 @@ then
   mkdir $LOGDIR/$TASKNAME/test
 fi
 
-tar czf $LOGDIR/$TASKNAME/certificates.tar.gz -C /etc/grid-security certificates
+if [ -e $TASKDIR/certificates.tar.gz ]
+then
+  cp $TASKDIR/certificates.tar.gz $LOGDIR/$TASKNAME/certificates.tar.gz
+else
+  tar czf $LOGDIR/$TASKNAME/certificates.tar.gz -C /etc/grid-security certificates
+fi
 
 cp $TASKDIR/confs/$TASKNAME/conf.sh $LOGDIR/$TASKNAME/conf.sh
 
@@ -177,7 +189,9 @@ then
 fi
 echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
 
-INPUTFILES="/tmp/x509up_u$(id -u),/var/local/lcg-cp.tar.gz,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/confs/$TASKNAME/gen.py"
+INPUTFILES="x509up_u$(id -u),$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/tools/cmssw_singularity.sh,$TASKDIR/confs/$TASKNAME/gen.py"
+
+#INPUTFILES=$INPUTFILES,'/var/local/lcg-cp.tar.gz'
 
 [ $PANDA_VERSION ] && INPUTFILES=$INPUTFILES,$TASKDIR/cmssw/${PANDA_CMSSW}.tar.gz
 
@@ -237,6 +251,18 @@ then
   exit 0
 fi
 
+# environments that may be used in jdltemplate
+export MAXWALLTIME
+export REQUIRED_OS
+if [[ $PANDA_ARCH =~ ^slc6 ]]
+then
+  REQUIRED_OS=rhel6
+elif [[ $PANDA_ARCH =~ ^slc7 ]]
+  REQUIRED_OS=rhel7
+fi
+
+JDL=$(mktemp)
+
 echo 'universe = vanilla
 executable = '$TASKDIR/$EXECUTABLE'
 should_transfer_files = YES
@@ -247,22 +273,23 @@ output = '$LOGDIR/$TASKNAME/'$(ClusterId).$(Process).out
 error = '$LOGDIR/$TASKNAME/'$(ClusterId).$(Process).err
 log = '$LOGDIR/$TASKNAME/'$(ClusterId).$(Process).log
 environment = "DESTINATION='$DESTINATION'"
-'"$REQUIREMENTS"'
 request_cpus = '$NCPU'
 rank = Mips
 arguments = "'$TASKTYPE' '$TASKNAME' '$NEVENTS' $(ClusterId) $(Process)"
 on_exit_hold = (ExitBySignal == True) || (ExitCode != 0)
 use_x509userproxy = True
-x509userproxy = /tmp/x509up_u'$(id -u)'
-+AccountingGroup = "analysis.'$(id -un)'"
-+REQUIRED_OS = "rhel6"
-+DESIRED_Sites = "T2_AT_Vienna,T2_BE_IIHE,T2_BE_UCL,T2_BR_SPRACE,T2_BR_UERJ,T2_CH_CERN,T2_CH_CERN_AI,T2_CH_CERN_HLT,T2_CH_CERN_Wigner,T2_CH_CSCS,T2_CH_CSCS_HPC,T2_CN_Beijing,T2_DE_DESY,T2_DE_RWTH,T2_EE_Estonia,T2_ES_CIEMAT,T2_ES_IFCA,T2_FI_HIP,T2_FR_CCIN2P3,T2_FR_GRIF_IRFU,T2_FR_GRIF_LLR,T2_FR_IPHC,T2_GR_Ioannina,T2_HU_Budapest,T2_IN_TIFR,T2_IT_Bari,T2_IT_Legnaro,T2_IT_Pisa,T2_IT_Rome,T2_KR_KISTI,T2_MY_SIFIR,T2_MY_UPM_BIRUNI,T2_PK_NCP,T2_PL_Swierk,T2_PL_Warsaw,T2_PT_NCG_Lisbon,T2_RU_IHEP,T2_RU_INR,T2_RU_ITEP,T2_RU_JINR,T2_RU_PNPI,T2_RU_SINP,T2_TH_CUNSTDA,T2_TR_METU,T2_TW_NCHC,T2_UA_KIPT,T2_UK_London_IC,T2_UK_SGrid_Bristol,T2_UK_SGrid_RALPP,T2_US_Caltech,T2_US_Florida,T2_US_MIT,T2_US_Nebraska,T2_US_Purdue,T2_US_UCSD,T2_US_Vanderbilt,T2_US_Wisconsin,T3_CH_CERN_CAF,T3_CH_CERN_DOMA,T3_CH_CERN_HelixNebula,T3_CH_CERN_HelixNebula_REHA,T3_CH_CMSAtHome,T3_CH_Volunteer,T3_US_HEPCloud,T3_US_NERSC,T3_US_OSG,T3_US_PSC,T3_US_SDSC"
-+ProjectName = "CpDarkMatterSimulation"
-+MaxWallTimeMins = '$MAXWALLTIME'
-'"$LOCALTEST"'
-queue '$NJOBS | condor_submit | tee _message
+x509userproxy = x509up_u'$(id -u)'
+' >> $JDL
 
-CLUSTER=$(sed -n 's/.*submitted to cluster \([0-9]*\)./\1/p' _message)
-rm _message
+$TASKDIR/jdls/$JDLTEMPLATE >> $JDL
+
+echo "queue $NJOBS" >> $JDL
+
+MSG=$(mktemp)
+condor_submit $JDL | tee $MSG
+
+CLUSTER=$(sed -n 's/.*submitted to cluster \([0-9]*\)./\1/p' $MSG)
+rm $MSG
+rm $JDL
 
 [ $CLUSTER ] && ln -s $LOGDIR/$TASKNAME $LOGDIR/$CLUSTER

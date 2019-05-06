@@ -49,6 +49,6 @@ ARGS="$ARGS outputFile=${STEP}.root"
 CFG=${STEP}_cfg.py
 
 echo cmsRun $CFG $ARGS
-cmsRun $CFG $ARGS
+cmsRun $CFG $ARGS || exit $?
 
 echo ${STEP}.root > output_files_${STEP}.list
