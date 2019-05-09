@@ -15,10 +15,15 @@ else
   REQUIREMENTS='requirements = Arch == "X86_64" && ( \
                    isUndefined(IS_GLIDEIN) || \
                    ( OSGVO_OS_STRING == "'$OSGVO_OS_STRING'" && HAS_CVMFS_cms_cern_ch == True ) || \
-                   ( HAS_SINGULARITY == true || GLIDEIN_REQUIRED_OS == "'$REQUIRED_OS'" ) || \
-                   ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms") ) \
-                 ) && \
-                 '$($(dirname $0)/../tools/exclusions.py)
+                   ( HAS_SINGULARITY == true || GLIDEIN_REQUIRED_OS == "'$REQUIRED_OS'" )'
+
+  # Currently MIT CampusFactory only supports rhel6 jobs
+  if [ $REQUIRED_OS = "rhel6" ]
+  then
+    REQUIREMENTS=$REQUIREMENTS' || ( GLIDEIN_Site == "MIT_CampusFactory" && (BOSCOGroup == "bosco_cms") )'
+  fi
+
+  REQUIREMENTS=$REQUIREMENTS') && '$($(dirname $0)/../tools/exclusions.py)
 fi
 
 REQUIRED_OS_CLASSAD='+REQUIRED_OS = "'$REQUIRED_OS'"'

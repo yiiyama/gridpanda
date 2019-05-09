@@ -1,10 +1,10 @@
 #!/bin/bash
 
 ## EDIT BELOW
-DESTINATION=/eos/cms/store/cmst3/user/yiiyama/hgcal_trig
+DESTINATION=gsiftp://eoscmsftp.cern.ch:2811//eos/cms/store/cmst3/user/yiiyama/hgcal_trig
 #DESTINATION=gsiftp://se01.cmsaf.mit.edu:2811/cms/store/user/yiiyama/gridpanda
-LOGDIR=/afs/cern.ch/work/y/yiiyama/gridpanda
-JDLTEMPLATE=cern.sh
+LOGDIR=/work/yiiyama/cms/logs/gridpanda
+JDLTEMPLATE=subMIT.sh
 ## EDIT ABOVE
 
 for ARG in $@
@@ -195,6 +195,14 @@ then
   echo "PANDA_RELEASE=$PANDA_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
 fi
 echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
+
+NUM_RELEASES=$(sed -n 's/.*_RELEASE=\([^_]*\)_.*/\1/p' $LOGDIR/$TASKNAME/conf.sh | sort | uniq | wc -l)
+if [ $NUM_RELEASES -gt 1 ]
+then
+  echo "USE_SINGULARITY=1" >> $LOGDIR/$TASKNAME/conf.sh
+else
+  echo "USE_SINGULARITY=0" >> $LOGDIR/$TASKNAME/conf.sh
+fi
 
 INPUTFILES="$X509_USER_PROXY,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/tools/cmssw_singularity.sh,$TASKDIR/confs/$TASKNAME/gen.py"
 

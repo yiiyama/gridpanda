@@ -88,9 +88,12 @@ echo ""
 echo "[DIRECTORY CONTENT]"
 ls -l
 
-if which singularity > /dev/null 2>&1
+if [ $USE_SINGULARITY -eq 1 ]
 then
-  singularity exec /cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7 echo "Singularity detected" || exit $?
+  echo ""
+  echo "[SINGULARITY SUPPORT]"
+  
+  singularity -d exec /cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7 echo "Singularity detected" || exit $?
   CMSSW_EXEC=$PWD/cmssw_singularity.sh
 else
   CMSSW_EXEC=$PWD/cmssw.sh

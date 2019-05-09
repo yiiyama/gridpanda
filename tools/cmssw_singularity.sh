@@ -23,8 +23,9 @@ if [[ $(uname -r) =~ $REQUIRED_UNAME ]]
 then
   $PWD/cmssw.sh $ARCH $RELEASE $STEP $ARGS || exit $?
 else
-  OPTS="--bind $PWD --bind /cvmfs --pwd $PWD"
+  OPTS="--bind $PWD --bind /cvmfs --pwd $PWD --home $PWD"
   IMG="/cvmfs/singularity.opensciencegrid.org/cmssw/cms:$REQUIRED_OS"
   
+  echo singularity exec $OPTS $IMG $PWD/cmssw.sh $ARCH $RELEASE $STEP $ARGS
   singularity exec $OPTS $IMG $PWD/cmssw.sh $ARCH $RELEASE $STEP $ARGS || exit $?
 fi
