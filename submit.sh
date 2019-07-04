@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ## EDIT BELOW
-DESTINATION=gsiftp://eoscmsftp.cern.ch:2811//eos/cms/store/cmst3/user/yiiyama/hgcal_trig
+DESTINATION=gsiftp://eoscmsftp.cern.ch:2811//eos/cms/store/user/yiiyama/hgcal_trig
 #DESTINATION=gsiftp://se01.cmsaf.mit.edu:2811/cms/store/user/yiiyama/gridpanda
 LOGDIR=/work/yiiyama/cms/logs/gridpanda
 JDLTEMPLATE=subMIT.sh
@@ -310,3 +310,11 @@ rm $MSG
 rm $JDL
 
 [ $CLUSTER ] && ln -s $LOGDIR/$TASKNAME $LOGDIR/$CLUSTER
+
+if [ $TASKTYPE = "fullsimmini" ]
+then
+  $MKDIRCMD $DESTINATION/$TASKNAME/miniaod/$CLUSTER
+  $MKDIRCMD $DESTINATION/$TASKNAME/panda/$CLUSTER
+else
+  $MKDIRCMD $DESTINATION/$TASKNAME/$CLUSTER
+fi

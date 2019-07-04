@@ -54,11 +54,13 @@ done
 if [ $CLUSTERID ] && [ $PROCESSID ]
 then
   FIRSTLUMI=$(($(($CLUSTERID%100000))*1000+$PROCESSID+1))
-  JOBID=$CLUSTERID.$PROCESSID
 else
+  CLUSTERID=0
+  PROCESSID=0
   FIRSTLUMI=1
-  JOBID=test
 fi
+
+JOBID=$CLUSTERID.$PROCESSID
 
 if [ "$(readlink /cvmfs/cms.cern.ch/SITECONF/local)" = "T3_US_OSG" ]
 then
@@ -235,17 +237,17 @@ if [ $TASKTYPE = "fullsimmini" ]
 then
   for att in $(seq 0 10)
   do
-    echo $COPYCMD $PWD/panda.root $DESTINATION/$TASKNAME/panda/$JOBID.root
-    $COPYCMD $PWD/panda.root $DESTINATION/$TASKNAME/panda/$JOBID.root && break
-    $REMOVECMD $DESTINATION/$TASKNAME/panda/$JOBID.root
+    echo $COPYCMD $PWD/panda.root $DESTINATION/$TASKNAME/panda/$CLUSTERID/$JOBID.root
+    $COPYCMD $PWD/panda.root $DESTINATION/$TASKNAME/panda/$CLUSTERID/$JOBID.root && break
+    $REMOVECMD $DESTINATION/$TASKNAME/panda/$CLUSTERID/$JOBID.root
     sleep 2
   done
 
   for att in $(seq 0 10)
   do
-    echo $COPYCMD $PWD/miniaodsim.root $DESTINATION/$TASKNAME/miniaod/$JOBID.root
-    $COPYCMD $PWD/miniaodsim.root $DESTINATION/$TASKNAME/miniaod/$JOBID.root && break
-    $REMOVECMD $DESTINATION/$TASKNAME/miniaod/$JOBID.root
+    echo $COPYCMD $PWD/miniaodsim.root $DESTINATION/$TASKNAME/miniaod/$CLUSTERID/$JOBID.root
+    $COPYCMD $PWD/miniaodsim.root $DESTINATION/$TASKNAME/miniaod/$CLUSTERID/$JOBID.root && break
+    $REMOVECMD $DESTINATION/$TASKNAME/miniaod/$CLUSTERID/$JOBID.root
     sleep 2
   done
 else
@@ -253,9 +255,9 @@ else
   do
     for att in $(seq 0 10)
     do
-      echo $COPYCMD $PWD/$FILE $DESTINATION/$TASKNAME/$JOBID.root
-      $COPYCMD $PWD/$FILE $DESTINATION/$TASKNAME/$JOBID.root && break
-      $REMOVECMD $DESTINATION/$TASKNAME/$JOBID.root
+      echo $COPYCMD $PWD/$FILE $DESTINATION/$TASKNAME/$CLUSTERID/$JOBID.root
+      $COPYCMD $PWD/$FILE $DESTINATION/$TASKNAME/$CLUSTERID/$JOBID.root && break
+      $REMOVECMD $DESTINATION/$TASKNAME/$CLUSTERID/$JOBID.root
       sleep 2
     done
   done < output_files_${LASTSTEP}.list
