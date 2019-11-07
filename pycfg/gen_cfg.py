@@ -25,7 +25,7 @@ if hasattr(process, 'externalLHEProducer'):
 
 process.options.numberOfThreads=cms.untracked.uint32(options.ncpu)
 
-if not options.simStep:
+if not options.simStep and hasattr(process, 'simulation_step'):
     process.schedule.remove(process.simulation_step)
 
 if options.randomizeSeeds:

@@ -8,5 +8,6 @@ else
 fi
 
 echo 'requirements = '$OSREQ'
-+JobFlavour = "tomorrow"
-+AccountingGroup = "group_u_CMST3.all"'
++JobFlavour = "longlunch"
+accounting_group = group_u_CMST3.all
++AccountingGroup = group_u_CMST3.all'

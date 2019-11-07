@@ -1,10 +1,10 @@
 #!/bin/bash
 
 ## EDIT BELOW
-DESTINATION=gsiftp://eoscmsftp.cern.ch:2811//eos/cms/store/user/yiiyama/hgcal_trig
+DESTINATION=gsiftp://eoscmsftp.cern.ch:2811//eos/cms/store/user/yiiyama/gridpanda
 #DESTINATION=gsiftp://se01.cmsaf.mit.edu:2811/cms/store/user/yiiyama/gridpanda
-LOGDIR=/work/yiiyama/cms/logs/gridpanda
-JDLTEMPLATE=subMIT.sh
+LOGDIR=/afs/cern.ch/work/y/yiiyama/gridpanda
+JDLTEMPLATE=cern.sh
 ## EDIT ABOVE
 
 for ARG in $@
@@ -16,6 +16,7 @@ do
       ;;
     -i)
       TEST=interactive
+      LOGDIR=$TMPDIR
       shift
       ;;
     -h)
@@ -37,6 +38,8 @@ function exitmsg() {
 
 [ $TASKTYPE ] || exitmsg "Usage: submit.sh (gen|fullsim|fullsimmini) TASKNAME NEVENTS NJOBS" 0
 
+eval `scram unsetenv -sh`
+
 TASKDIR=$(cd $(dirname $(readlink -f $0)); pwd)
 EXECUTABLE=gridpanda.sh
 
@@ -45,7 +48,7 @@ EXECUTABLE=gridpanda.sh
 source $TASKDIR/confs/$TASKNAME/conf.sh || exit 1
 # conf.sh can set the following parameters (*=required for all confs, -=required if TASKTYPE is fullsim or fullsimmini, .=depends on the conf, o=optional):
 #  o GEN_ARCH: SCRAM arch for the gensim step
-#  . GEN_CAMPAIGN: Production campaign for the gensim step. Required if TASKTYPE is gen
+#  . GEN_CAMPAIGN: Production campaign for the gensim step.
 #  . GEN_RELEASE: CMSSW release (full name) for the gensim step. Necesssary if campaign is not mapped in campaign_releases.json
 #  . GEN_CMSSW: Name of the custom CMSSW tarball
 #  o MINIAOD_ARCH: SCRAM arch for the miniaodsim step
@@ -81,9 +84,10 @@ then
   [ $GEN_CAMPAIGN ] || GEN_CAMPAIGN=$($CONFMAP digireco.${RECO_CAMPAIGN}.parent)
   [ $MIXDATA ] || MIXDATA=$($CONFMAP digireco.${RECO_CAMPAIGN}.mix)
   [ $MIXDATA ] || exitmsg "Unknown MIXDATA for non-standard campaign" 1
+else
+  [ $GEN_CAMPAIGN ] || GEN_CAMPAIGN=unknown
 fi
 
-[ $GEN_CAMPAIGN ] || exitmsg "Missing GEN_CAMPAIGN" 1
 [ $GEN_ARCH ] || GEN_ARCH=$($CONFMAP gen.${GEN_CAMPAIGN}.arch)
 [ $GEN_ARCH ] || exitmsg "Unknown GEN_ARCH for non-standard campaign" 1
 [ $GEN_RELEASE ] || GEN_RELEASE=$($CONFMAP gen.${GEN_CAMPAIGN}.release)
@@ -124,7 +128,7 @@ fi
 
 ## LOG DIRECTORY
 
-mkdir -p $LOGDIR/$TASKNAME
+mkdir -p $LOGDIR/$TASKNAME/clusters
 
 export X509_USER_PROXY=$LOGDIR/$TASKNAME/x509up_u$(id -u)
 if ! [ -e $X509_USER_PROXY ] || [ $(voms-proxy-info --timeleft --file $X509_USER_PROXY) -lt $((3600*24)) ]
@@ -195,14 +199,6 @@ then
   echo "PANDA_RELEASE=$PANDA_RELEASE" >> $LOGDIR/$TASKNAME/conf.sh
 fi
 echo "NCPU=$NCPU" >> $LOGDIR/$TASKNAME/conf.sh
-
-NUM_RELEASES=$(sed -n 's/.*_RELEASE=\([^_]*\)_.*/\1/p' $LOGDIR/$TASKNAME/conf.sh | sort | uniq | wc -l)
-if [ $NUM_RELEASES -gt 1 ]
-then
-  echo "USE_SINGULARITY=1" >> $LOGDIR/$TASKNAME/conf.sh
-else
-  echo "USE_SINGULARITY=0" >> $LOGDIR/$TASKNAME/conf.sh
-fi
 
 INPUTFILES="$X509_USER_PROXY,$LOGDIR/$TASKNAME/certificates.tar.gz,$LOGDIR/$TASKNAME/conf.sh,$TASKDIR/tools/cmssw.sh,$TASKDIR/tools/cmssw_singularity.sh,$TASKDIR/confs/$TASKNAME/gen.py"
 
@@ -309,7 +305,10 @@ CLUSTER=$(sed -n 's/.*submitted to cluster \([0-9]*\)./\1/p' $MSG)
 rm $MSG
 rm $JDL
 
-[ $CLUSTER ] && ln -s $LOGDIR/$TASKNAME $LOGDIR/$CLUSTER
+[ $CLUSTER ] || exit 1
+
+ln -s $LOGDIR/$TASKNAME $LOGDIR/$CLUSTER
+touch $LOGDIR/$TASKNAME/clusters/$CLUSTER
 
 if [ $TASKTYPE = "fullsimmini" ]
 then

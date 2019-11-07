@@ -46,9 +46,20 @@ do
       $COPYCMD "$URL" $GRIDPACK && break
       sleep 60
     done
+  elif [[ $GRIDPACK =~ root:// ]]
+  then
+    URL=$GRIDPACK
+    GRIDPACK=$(basename "$URL")
+    echo "Downloading $GRIDPACK from $URL"
 
-    GRIDPACKS_ARG="$GRIDPACKS_ARG gridpacks=$PWD/$GRIDPACK"
+    while true
+    do
+      xrdcp "$URL" $GRIDPACK && break
+      sleep 60
+    done
   fi
+
+  GRIDPACKS_ARG="$GRIDPACKS_ARG gridpacks=$PWD/$GRIDPACK"
 done
 
 if [ $CLUSTERID ] && [ $PROCESSID ]
@@ -90,18 +101,32 @@ echo ""
 echo "[DIRECTORY CONTENT]"
 ls -l
 
-if [ $USE_SINGULARITY -eq 1 ]
+function cmssw_exec() {
+  ARCH=$1
+
+  if ( [[ $ARCH =~ slc6 ]] && [[ $(uname -r) =~ el7 ]] ) || \
+      ( [[ $ARCH =~ slc7 ]] && [[ $(uname -r) =~ el6 ]] )
+  then
+    $PWD/cmssw_singularity.sh $@
+  else
+    $PWD/cmssw.sh $@
+  fi
+}
+
+ARCHS=$(for ARCH in $GEN_ARCH $RECO_ARCH $MINIAOD_ARCH $PANDA_ARCH; do echo $ARCH; done | sort | uniq)
+
+if ( [[ $(uname -r) =~ el6 ]] && [[ "$ARCHS" =~ slc7 ]] ) || \
+    ( [[ $(uname -r) =~ el7 ]] && [[ "$ARCHS" =~ slc6 ]] )
 then
   echo ""
   echo "[SINGULARITY SUPPORT]"
   
-  singularity -d exec /cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7 echo "Singularity detected" || exit $?
-  CMSSW_EXEC=$PWD/cmssw_singularity.sh
-else
-  CMSSW_EXEC=$PWD/cmssw.sh
+  singularity exec /cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7 echo "Singularity detected" || exit $?
 fi
 
 source /cvmfs/cms.cern.ch/cmsset_default.sh
+
+eval `scram unsetenv -sh`
 
 [ $GEN_CMSSW ] && mv ${GEN_CMSSW}.tar.gz gen_${GEN_RELEASE}.tar.gz
 
@@ -123,7 +148,7 @@ then
   then
     source gen.sh 
   else
-    $CMSSW_EXEC $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
+    cmssw_exec $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=False $GRIDPACKS_ARG || exit $?
   fi
 
   LASTSTEP=gen
@@ -146,7 +171,7 @@ then
   then
     source gen.sh
   else
-    $CMSSW_EXEC $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
+    cmssw_exec $GEN_ARCH $GEN_RELEASE gen ncpu=$NCPU maxEvents=$NEVENTS randomizeSeeds=True firstLumi=$FIRSTLUMI simStep=True $GRIDPACKS_ARG || exit $?
   fi
 
   mv rawsim_${RECO_CAMPAIGN}.py _rawsim.py
@@ -160,7 +185,7 @@ then
   for att in $(seq 0 9)
   do
     # this step can fail due to pileup IO error
-    $CMSSW_EXEC $RECO_ARCH $RECO_RELEASE rawsim ncpu=$NCPU mixdata=$PWD/mixdata.list randomizeSeeds=True && break
+    cmssw_exec $RECO_ARCH $RECO_RELEASE rawsim ncpu=$NCPU mixdata=$PWD/mixdata.list randomizeSeeds=True && break
   done
   RC=$?
   [ $RC -ne 0 ] && exit $RC
@@ -175,7 +200,7 @@ then
   
   echo ""
   echo "[RECO STEP]"
-  $CMSSW_EXEC $RECO_ARCH $RECO_RELEASE recosim ncpu=$NCPU randomizeSeeds=True || exit $?
+  cmssw_exec $RECO_ARCH $RECO_RELEASE recosim ncpu=$NCPU randomizeSeeds=True || exit $?
 
   cat input_files_recosim.list | xargs rm
 
@@ -184,7 +209,7 @@ then
   
   echo ""
   echo "[MINIAOD STEP]"
-  $CMSSW_EXEC $MINIAOD_ARCH $MINIAOD_RELEASE miniaodsim ncpu=$NCPU randomizeSeeds=True || exit $?
+  cmssw_exec $MINIAOD_ARCH $MINIAOD_RELEASE miniaodsim ncpu=$NCPU randomizeSeeds=True || exit $?
 
   cat input_files_miniaodsim.list | xargs rm
 
@@ -202,7 +227,7 @@ if [ $PANDA_VERSION ]
 then
   echo ""
   echo "[PANDA STEP]"
-  $CMSSW_EXEC $PANDA_ARCH $PANDA_RELEASE panda || exit $?
+  cmssw_exec $PANDA_ARCH $PANDA_RELEASE panda || exit $?
   [ $TASKTYPE != "fullsimmini" ] && cat input_files_panda.list | xargs rm
 
   LASTSTEP=panda
