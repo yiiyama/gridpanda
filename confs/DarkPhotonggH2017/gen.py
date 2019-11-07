@@ -1,13 +1,3 @@
-from FWCore.ParameterSet.VarParsing import VarParsing
-
-options = VarParsing('analysis')
-options.register('firstLumi', default = 1, mytype = VarParsing.varType.int)
-options.register('randomizeSeeds', default = False, mytype = VarParsing.varType.bool)
-options.register('simStep', mytype = VarParsing.varType.bool, default = False)
-options._tags.pop('numEvent%d')
-options._tagOrder.remove('numEvent%d')
-options.parseArguments()
-
 # Auto generated configuration file
 # using: 
 # Revision: 1.19 
@@ -36,12 +26,12 @@ process.load('Configuration.StandardSequences.EndOfProcess_cff')
 process.load('Configuration.StandardSequences.FrontierConditions_GlobalTag_cff')
 
 process.maxEvents = cms.untracked.PSet(
-    input = cms.untracked.int32(options.maxEvents)
+    input = cms.untracked.int32(1)
 )
 
 # Input source
 process.source = cms.Source("EmptySource",
-    firstLuminosityBlock = cms.untracked.uint32(options.firstLumi)
+    firstLuminosityBlock = cms.untracked.uint32(1)
 )
 
 process.options = cms.untracked.PSet(
@@ -68,7 +58,7 @@ process.RAWSIMoutput = cms.OutputModule("PoolOutputModule",
         filterName = cms.untracked.string('')
     ),
     eventAutoFlushCompressedSize = cms.untracked.int32(20971520),
-    fileName = cms.untracked.string(options.outputFile),
+    fileName = cms.untracked.string('out.root'),
     outputCommands = process.RAWSIMEventContent.outputCommands,
     splitLevel = cms.untracked.int32(0)
 )
@@ -148,7 +138,7 @@ process.generator = cms.EDFilter("Pythia8HadronizerFilter",
 
 process.externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
     args = cms.vstring('/cvmfs/cms.cern.ch/phys_generator/gridpacks/2017/13TeV/powheg/V2/gg_H_quark-mass-effects_NNPDF31_13TeV_M125/v1/gg_H_quark-mass-effects_NNPDF31_13TeV_M125_slc6_amd64_gcc630_CMSSW_9_3_0.tgz'),
-    nEvents = cms.untracked.uint32(options.maxEvents),
+    nEvents = cms.untracked.uint32(1),
     numberOfParameters = cms.uint32(1),
     outputFile = cms.string('cmsgrid_final.lhe'),
     scriptName = cms.FileInPath('GeneratorInterface/LHEInterface/data/run_generic_tarball_cvmfs.sh')
@@ -166,10 +156,7 @@ process.RAWSIMoutput_step = cms.EndPath(process.RAWSIMoutput)
 #process.LHEoutput_step = cms.EndPath(process.LHEoutput)
 
 # Schedule definition
-if options.simStep:
-    process.schedule = cms.Schedule(process.lhe_step,process.generation_step,process.genfiltersummary_step,process.simulation_step,process.endjob_step,process.RAWSIMoutput_step)
-else:
-    process.schedule = cms.Schedule(process.lhe_step,process.generation_step,process.genfiltersummary_step,process.endjob_step,process.RAWSIMoutput_step)
+process.schedule = cms.Schedule(process.lhe_step,process.generation_step,process.genfiltersummary_step,process.simulation_step,process.endjob_step,process.RAWSIMoutput_step)
 
 from PhysicsTools.PatAlgos.tools.helpers import associatePatAlgosToolsTask
 associatePatAlgosToolsTask(process)
@@ -196,7 +183,3 @@ process = customiseEarlyDelete(process)
 # End adding early deletion
 
 # End of customisation functions
-if options.randomizeSeeds:
-    from IOMC.RandomEngine.RandomServiceHelper import RandomNumberServiceHelper
-    randSvc = RandomNumberServiceHelper(process.RandomNumberGeneratorService)
-    randSvc.populate()

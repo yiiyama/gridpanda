@@ -6,7 +6,42 @@ NEVENTS=$3
 CLUSTERID=$4
 PROCESSID=$5
 
+if [ $CLUSTERID ] && [ $PROCESSID ]
+then
+  FIRSTLUMI=$(($(($CLUSTERID%100000))*1000+$PROCESSID+1))
+else
+  CLUSTERID=0
+  PROCESSID=0
+  FIRSTLUMI=1
+fi
+
+JOBID=$CLUSTERID.$PROCESSID
+
+if [ "$(readlink /cvmfs/cms.cern.ch/SITECONF/local)" = "T3_US_OSG" ]
+then
+  mkdir SITECONF
+  ln -s /cvmfs/cms.cern.ch/SITECONF/T2_US_MIT SITECONF/local
+  export CMS_PATH=$PWD
+fi
+
+echo "[HOSTNAME]"
+hostname
+uname -a
+id
+echo ""
+
+tar xzf certificates.tar.gz
+
+export X509_CERT_DIR=$PWD/certificates
+export X509_USER_PROXY=$(ls x509up_u*)
+export HOME=.
+
+export PATH=/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH
+
 source conf.sh
+
+echo "[ENV]"
+env
 
 GRIDPACKS_ARG=
 for GRIDPACK in $GRIDPACKS
@@ -61,41 +96,6 @@ do
 
   GRIDPACKS_ARG="$GRIDPACKS_ARG gridpacks=$PWD/$GRIDPACK"
 done
-
-if [ $CLUSTERID ] && [ $PROCESSID ]
-then
-  FIRSTLUMI=$(($(($CLUSTERID%100000))*1000+$PROCESSID+1))
-else
-  CLUSTERID=0
-  PROCESSID=0
-  FIRSTLUMI=1
-fi
-
-JOBID=$CLUSTERID.$PROCESSID
-
-if [ "$(readlink /cvmfs/cms.cern.ch/SITECONF/local)" = "T3_US_OSG" ]
-then
-  mkdir SITECONF
-  ln -s /cvmfs/cms.cern.ch/SITECONF/T2_US_MIT SITECONF/local
-  export CMS_PATH=$PWD
-fi
-
-echo "[HOSTNAME]"
-hostname
-uname -a
-id
-echo ""
-
-tar xzf certificates.tar.gz
-
-export X509_CERT_DIR=$PWD/certificates
-export X509_USER_PROXY=$(ls x509up_u*)
-export HOME=.
-
-export PATH=/usr/local/bin:/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/sbin:$PATH
-
-echo "[ENV]"
-env
 
 echo ""
 echo "[DIRECTORY CONTENT]"
