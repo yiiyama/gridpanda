@@ -155,7 +155,6 @@ process.externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
     scriptName = cms.FileInPath('GeneratorInterface/LHEInterface/data/run_generic_tarball_cvmfs.sh')
 )
 
-
 # Path and EndPath definitions
 process.lhe_step = cms.Path(process.externalLHEProducer)
 process.generation_step = cms.Path(process.pgen)

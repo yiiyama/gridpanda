@@ -81,13 +81,24 @@ process.genstepfilter.triggerConditions=cms.vstring("generation_step")
 from Configuration.AlCa.GlobalTag import GlobalTag
 process.GlobalTag = GlobalTag(process.GlobalTag, '93X_mc2017_realistic_v3', '')
 
+from Configuration.Generator.Pythia8CommonSettings_cfi import *
+from Configuration.Generator.MCTunes2017.PythiaCP5Settings_cfi import *
+from Configuration.Generator.Pythia8aMCatNLOSettings_cfi import *
+#from Configuration.Generator.PSweightsPythia.PythiaPSweightsSettings_cfi import *
+
 process.generator = cms.EDFilter("Pythia8HadronizerFilter",
+    maxEventsToPrint = cms.untracked.int32(1),
+    pythiaPylistVerbosity = cms.untracked.int32(1),
+    filterEfficiency = cms.untracked.double(1.0),
+    pythiaHepMCVerbosity = cms.untracked.bool(False),
+    comEnergy = cms.double(13000.0),
     PythiaParameters = cms.PSet(
-        parameterSets = cms.vstring('pythia8CommonSettings', 
-            'pythia8CP5Settings', 
-            'pythia8aMCatNLOSettings', 
-            'processParameters'),
-        processParameters = cms.vstring('JetMatching:setMad = off', 
+        pythia8CommonSettingsBlock,
+        pythia8CP5SettingsBlock,
+        pythia8aMCatNLOSettingsBlock,
+        #pythia8PSweightsSettingsBlock,
+        processParameters = cms.vstring(
+            'JetMatching:setMad = off', 
             'JetMatching:scheme = 1', 
             'JetMatching:merge = on', 
             'JetMatching:jetAlgorithm = 2', 
@@ -99,52 +110,62 @@ process.generator = cms.EDFilter("Pythia8HadronizerFilter",
             'JetMatching:qCutME = 30.', 
             'JetMatching:nQmatch = 5', 
             'JetMatching:nJetMax = 2', 
-            'TimeShower:mMaxGamma = 4.0'),
-        pythia8CP5Settings = cms.vstring('Tune:pp 14', 
-            'Tune:ee 7', 
-            'MultipartonInteractions:ecmPow=0.03344', 
-            'PDF:pSet=20', 
-            'MultipartonInteractions:bProfile=2', 
-            'MultipartonInteractions:pT0Ref=1.41', 
-            'MultipartonInteractions:coreRadius=0.7634', 
-            'MultipartonInteractions:coreFraction=0.63', 
-            'ColourReconnection:range=5.176', 
-            'SigmaTotal:zeroAXB=off', 
-            'SpaceShower:alphaSorder=2', 
-            'SpaceShower:alphaSvalue=0.118', 
-            'SigmaProcess:alphaSvalue=0.118', 
-            'SigmaProcess:alphaSorder=2', 
-            'MultipartonInteractions:alphaSvalue=0.118', 
-            'MultipartonInteractions:alphaSorder=2', 
-            'TimeShower:alphaSorder=2', 
-            'TimeShower:alphaSvalue=0.118'),
-        pythia8CommonSettings = cms.vstring('Tune:preferLHAPDF = 2', 
-            'Main:timesAllowErrors = 10000', 
-            'Check:epTolErr = 0.01', 
-            'Beams:setProductionScalesFromLHEF = off', 
-            'SLHA:keepSM = on', 
-            'SLHA:minMassSM = 1000.', 
-            'ParticleDecays:limitTau0 = on', 
-            'ParticleDecays:tau0Max = 10', 
-            'ParticleDecays:allowPhotonRadiation = on'),
-        pythia8aMCatNLOSettings = cms.vstring('SpaceShower:pTmaxMatch = 1', 
-            'SpaceShower:pTmaxFudge = 1', 
-            'SpaceShower:MEcorrections = off', 
-            'TimeShower:pTmaxMatch = 1', 
-            'TimeShower:pTmaxFudge = 1', 
-            'TimeShower:MEcorrections = off', 
-            'TimeShower:globalRecoil = on', 
-            'TimeShower:limitPTmaxGlobal = on', 
-            'TimeShower:nMaxGlobalRecoil = 1', 
-            'TimeShower:globalRecoilMode = 2', 
-            'TimeShower:nMaxGlobalBranch = 1', 
-            'TimeShower:weightGluonToQuark = 1')
-    ),
-    comEnergy = cms.double(13000.0),
-    filterEfficiency = cms.untracked.double(1.0),
-    maxEventsToPrint = cms.untracked.int32(1),
-    pythiaHepMCVerbosity = cms.untracked.bool(False),
-    pythiaPylistVerbosity = cms.untracked.int32(1)
+            'TimeShower:mMaxGamma = 4.0'
+        ),
+        parameterSets = cms.vstring(
+            'pythia8CommonSettings', 
+            'pythia8CP5Settings', 
+            'pythia8aMCatNLOSettings', 
+            #'pythia8PSweightsSettings',
+            'processParameters'
+        )
+    )
+)
+
+from RecoJets.Configuration.GenJetParticles_cff import genParticlesForJetsNoNu
+from RecoJets.Configuration.RecoGenJets_cff import ak4GenJetsNoNu
+
+# Filter out PromptFinalState photons
+process.genParticlesNoGamma = cms.EDFilter('CandPtrSelector',
+    src = cms.InputTag('genParticles'),
+    cut = cms.string('pdgId != 22 || !isPromptFinalState')
+)
+
+process.genParticlesForJetsNoNuNoGamma = genParticlesForJetsNoNu.clone(
+    src = cms.InputTag("genParticlesNoGamma")
+)
+
+process.ak4GenJetsNoNuNoGamma = ak4GenJetsNoNu.clone(
+    src = cms.InputTag("genParticlesForJetsNoNuNoGamma")
+)
+
+process.vbfGenJetFilterD = cms.EDFilter("VBFGenJetFilter",
+    inputTag_GenJetCollection = cms.untracked.InputTag("ak4GenJetsNoNuNoGamma"),
+    maxEta = cms.untracked.double(99999.0),
+    minEta = cms.untracked.double(-99999.0),
+    minInvMass = cms.untracked.double(400.),
+    minPt = cms.untracked.double(30.)
+)
+
+from GeneratorInterface.Core.generatorSmeared_cfi import generatorSmeared
+from PhysicsTools.HepMCCandAlgos.genParticles_cfi import genParticles
+
+process.ProductionFilterSequence = cms.Sequence(
+    process.generator+
+    cms.SequencePlaceholder('randomEngineStateProducer')+
+    cms.SequencePlaceholder('VtxSmeared')+
+    process.generatorSmeared+
+    process.genParticles+
+    process.genParticlesNoGamma+
+    process.genParticlesForJetsNoNuNoGamma+
+    process.ak4GenJetsNoNuNoGamma+
+    process.vbfGenJetFilterD+
+    cms.SequencePlaceholder("pgen")
+)
+
+process.SimFilterSequence = cms.Sequence(
+    process.vbfGenJetFilterD+
+    cms.SequencePlaceholder("psim")
 )
 
 process.externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
@@ -154,7 +175,6 @@ process.externalLHEProducer = cms.EDProducer("ExternalLHEProducer",
     outputFile = cms.string('cmsgrid_final.lhe'),
     scriptName = cms.FileInPath('GeneratorInterface/LHEInterface/data/run_generic_tarball_cvmfs.sh')
 )
-
 
 # Path and EndPath definitions
 process.lhe_step = cms.Path(process.externalLHEProducer)
@@ -177,7 +197,7 @@ process.options.numberOfStreams=cms.untracked.uint32(0)
 # filter all path with the production filter sequence
 for path in process.paths:
 	if path in ['lhe_step']: continue
-	getattr(process,path)._seq = process.generator * getattr(process,path)._seq 
+	getattr(process,path)._seq = process.ProductionFilterSequence * getattr(process,path)._seq 
 
 # customisation of the process.
 

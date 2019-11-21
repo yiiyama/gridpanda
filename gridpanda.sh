@@ -92,6 +92,11 @@ do
       xrdcp "$URL" $GRIDPACK && break
       sleep 60
     done
+  else
+    echo "Copying $GRIDPACK"
+
+    cp $GRIDPACK .
+    GRIDPACK=$(basename $GRIDPACK)
   fi
 
   GRIDPACKS_ARG="$GRIDPACKS_ARG gridpacks=$PWD/$GRIDPACK"

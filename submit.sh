@@ -19,6 +19,10 @@ do
       LOGDIR=$TMPDIR
       shift
       ;;
+    -p)
+      PROXY_SOURCE=/tmp
+      shift
+      ;;
     -h)
       echo "Usage: submit.sh [-t|-i] (gen|fullsim|fullsimmini) TASKNAME [NEVENTS] [NJOBS]"
       exit 0
@@ -133,7 +137,12 @@ mkdir -p $LOGDIR/$TASKNAME/clusters
 export X509_USER_PROXY=$LOGDIR/$TASKNAME/x509up_u$(id -u)
 if ! [ -e $X509_USER_PROXY ] || [ $(voms-proxy-info --timeleft --file $X509_USER_PROXY) -lt $((3600*24)) ]
 then
-  voms-proxy-init --valid 192:00 -voms cms --out $X509_USER_PROXY || exit 1
+  if [ $PROXY_SOURCE ]
+  then
+    cp $PROXY_SOURCE/x509up_u$(id -u) $X509_USER_PROXY
+  else
+    voms-proxy-init --valid 192:00 -voms cms --out $X509_USER_PROXY || exit 1
+  fi
 fi
 
 if [ "$TEST" = interactive ]
